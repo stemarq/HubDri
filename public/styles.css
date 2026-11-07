@@ -262,6 +262,8 @@ input[type="checkbox"], input[type="radio"] { width: auto; padding: 0; flex: non
 .itens .editar input { padding: 8px 10px; }
 .totais { margin-top: 12px; display: grid; gap: 6px; }
 .totais div { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.totais .desl { align-items: start; gap: 12px; }
+.totais .desl small { display: block; font-size: 12px; margin-top: 2px; }
 .totais .final { margin-top: 6px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--primary); color: var(--primary-fg); font-weight: 700; font-size: 20px; align-items: center; }
 .totais .final .label { color: var(--primary-fg); opacity: 0.85; }
 .barra-edicao { display: grid; gap: 10px; margin-top: 14px; }

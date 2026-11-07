@@ -449,7 +449,10 @@ function blocoCalculo(o, podeAgir) {
   const itens = editando ? edicao.itens : c.itens;
   const fmtQtd = (q) => Number(q).toLocaleString("pt-BR");
 
-  const linhas = itens.map((it, i) => `
+  // Deslocamento (ida e volta) fica fora da lista de serviços: aparece no detalhamento dos totais.
+  const iDesl = itens.findIndex((it) => it.codigo === "DESL");
+  const desl = itens[iDesl];
+  const linhas = itens.map((it, i) => (!editando && i === iDesl) ? "" : `
     <li>
       <span class="desc">${esc(it.descricao)}</span>
       <span class="tot">${brl(it.quantidade * it.valorUnitario)}</span>
@@ -464,6 +467,7 @@ function blocoCalculo(o, podeAgir) {
     </li>`).join("");
 
   const subtotal = itens.reduce((s, i) => s + i.quantidade * i.valorUnitario, 0);
+  const valorDesl = desl ? desl.quantidade * desl.valorUnitario : 0;
   const desc = editando ? edicao.descontoPercentual : c.descontoPercentual;
   const total = subtotal - subtotal * (desc || 0) / 100;
 
@@ -499,8 +503,15 @@ function blocoCalculo(o, podeAgir) {
           opcoes: meta.catalogo.map((x) => ({ valor: x.codigo, titulo: x.descricao, detalhe: `${brl(precoLocal(x, local))} / ${x.unidade}` })),
         })}
         <label><span class="label">Desconto % (máx. ${meta.descontoMaximo})</span><input type="number" inputmode="decimal" id="desconto" min="0" max="${meta.descontoMaximo}" value="${desc || 0}"></label>
+        ${local === "domicilio" && !desl ? `<button type="button" class="btn pequeno" id="add-desl">+ Deslocamento</button>` : ""}
       </div>` : ""}
     <div class="totais">
+      ${desl || local === "domicilio" ? `
+        <div><span class="muted">Serviços</span><span>${brl(subtotal - valorDesl)}</span></div>
+        <div class="desl">
+          <span class="muted">Deslocamento (ida e volta)${desl?.observacao ? `<small>${esc(desl.observacao)}</small>` : ""}</span>
+          <span>${desl ? brl(valorDesl) : `<span class="muted">não calculado</span>`}</span>
+        </div>` : ""}
       <div><span class="muted">Subtotal</span><span>${brl(subtotal)}</span></div>
       ${desc ? `<div><span class="muted">Desconto (${desc}%)</span><span>− ${brl(subtotal * desc / 100)}</span></div>` : ""}
       <div class="final"><span class="label">Total</span><span>${brl(total)}</span></div>
@@ -657,6 +668,11 @@ function ligarAcoesDetalhe(o) {
       if (cat) edicao.itens.push({ codigo: cat.codigo, descricao: cat.descricao, unidade: cat.unidade, quantidade: 1, valorUnitario: precoLocal(cat, o.calculo.local), observacao: "" });
       await render();
       $("#add-item .dropdown-botao")?.focus({ preventScroll: true }); // mantém o foco após redesenhar
+    });
+    $("#add-desl")?.addEventListener("click", async () => {
+      edicao.itens.push({ codigo: "DESL", descricao: "Deslocamento (ida e volta)", unidade: "un", quantidade: 1, valorUnitario: 0, observacao: "" });
+      await render();
+      app.querySelector(`[data-campo="valorUnitario"][data-i="${edicao.itens.length - 1}"]`)?.focus();
     });
     $("#desconto").addEventListener("change", (e) => {
       const v = Number(e.target.value) || 0;
