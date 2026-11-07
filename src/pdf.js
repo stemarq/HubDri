@@ -130,7 +130,7 @@ export function gerarPdf(orc, stream) {
     ["Data", orc.evento?.data || "A combinar"],
     ["Início do atendimento", orc.evento?.horario || "A combinar"],
     ...(pronta ? [["Pronta às", pronta]] : []),
-    ["Local", orc.evento?.local || orc.cliente.cidade || "A combinar"],
+    ["Local", orc.calculo?.local === "domicilio" ? ["A domicílio", orc.evento?.local || orc.cliente.cidade].filter(Boolean).join(" · ") : "No studio"],
   ];
   const col = W / meta.length;
   let fimMeta = y;

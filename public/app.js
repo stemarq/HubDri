@@ -438,8 +438,13 @@ async function telaOrcamento(id) {
   return o;
 }
 
+// Preço do serviço no local do atendimento (sem preço a domicílio cadastrado, vale o do studio).
+const precoLocal = (cat, local) => (local === "domicilio" && cat.valorDomicilio != null ? cat.valorDomicilio : cat.valor);
+const LOCAIS = { studio: "No studio", domicilio: "A domicílio" };
+
 function blocoCalculo(o, podeAgir) {
   const c = o.calculo;
+  const local = c.local || "studio";
   const editando = Boolean(edicao);
   const itens = editando ? edicao.itens : c.itens;
   const fmtQtd = (q) => Number(q).toLocaleString("pt-BR");
@@ -476,6 +481,13 @@ function blocoCalculo(o, podeAgir) {
           ${meta.iaDisponivel ? `<br><button class="btn pequeno" data-recalcular>Tentar com a IA de novo</button>` : ""}
         </div>
       </div>` : ""}
+    <div class="local-atendimento">
+      <span class="label" id="rotulo-local">Local do atendimento</span>
+      ${podeAgir && !editando ? `
+        <div class="seg" role="group" aria-labelledby="rotulo-local">
+          ${Object.entries(LOCAIS).map(([k, t]) => `<button type="button" data-local="${k}" aria-pressed="${k === local}">${t}</button>`).join("")}
+        </div>` : `<strong>${LOCAIS[local]}</strong>`}
+    </div>
     <p class="label" style="margin:-6px 0 14px">${c.geradoPor === "ia" ? `Gerado pela IA${c.ia ? ` (${esc(c.ia)})` : ""}` : "Gerado por regras"} · ${dataHora(c.geradoEm)}${c.editadoManualmente ? " · editado" : ""}</p>
     <ul class="itens">${linhas || `<li class="muted">Nenhum item.</li>`}</ul>
     ${editando ? `
@@ -484,7 +496,7 @@ function blocoCalculo(o, podeAgir) {
           id: "add-item",
           rotulo: "Adicionar serviço",
           placeholder: "Escolha um serviço…",
-          opcoes: meta.catalogo.map((x) => ({ valor: x.codigo, titulo: x.descricao, detalhe: `${brl(x.valor)} / ${x.unidade}` })),
+          opcoes: meta.catalogo.map((x) => ({ valor: x.codigo, titulo: x.descricao, detalhe: `${brl(precoLocal(x, local))} / ${x.unidade}` })),
         })}
         <label><span class="label">Desconto % (máx. ${meta.descontoMaximo})</span><input type="number" inputmode="decimal" id="desconto" min="0" max="${meta.descontoMaximo}" value="${desc || 0}"></label>
       </div>` : ""}
@@ -588,6 +600,14 @@ function ligarAcoesDetalhe(o) {
     if (r) avisar("O novo cálculo aparece aqui em alguns segundos.", "info", "Mudança registrada");
   });
 
+  app.querySelectorAll("[data-local]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      if (b.getAttribute("aria-pressed") === "true") return;
+      const r = await executar(b, "Trocando…", () => api(`/api/orcamentos/${o.id}/local`, { method: "POST", body: { local: b.dataset.local } }), "Não foi possível trocar o local");
+      if (r) avisar(`Preços da tabela ${b.dataset.local === "domicilio" ? "a domicílio" : "do studio"}. Novo total: ${brl(r.calculo.total)}.`, "sucesso", "Local trocado");
+    })
+  );
+
   app.querySelectorAll("[data-recalcular]").forEach((b) =>
     b.addEventListener("click", async () => {
       const ok = await confirmar({
@@ -634,7 +654,7 @@ function ligarAcoesDetalhe(o) {
     );
     ligarDropdown($("#add-item"), async (codigo) => {
       const cat = meta.catalogo.find((x) => x.codigo === codigo);
-      if (cat) edicao.itens.push({ codigo: cat.codigo, descricao: cat.descricao, unidade: cat.unidade, quantidade: 1, valorUnitario: cat.valor, observacao: "" });
+      if (cat) edicao.itens.push({ codigo: cat.codigo, descricao: cat.descricao, unidade: cat.unidade, quantidade: 1, valorUnitario: precoLocal(cat, o.calculo.local), observacao: "" });
       await render();
       $("#add-item .dropdown-botao")?.focus({ preventScroll: true }); // mantém o foco após redesenhar
     });

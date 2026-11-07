@@ -219,20 +219,21 @@ input[type="checkbox"], input[type="radio"] { width: auto; padding: 0; flex: non
 /* Configurações: no celular, a descrição ocupa a linha de cima e os campos curtos ficam embaixo. */
 .item-cat {
   display: grid; gap: 6px; align-items: center;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, 1fr) auto;
-  grid-template-areas: "desc desc desc desc" "cod un val rem";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-areas: "desc desc desc" "cod un un" "val dom rem";
   padding-bottom: 10px; border-bottom: 1px solid var(--border);
 }
 .item-cat > :nth-child(1) { grid-area: cod; }
 .item-cat > :nth-child(2) { grid-area: desc; }
 .item-cat > :nth-child(3) { grid-area: un; }
 .item-cat > :nth-child(4) { grid-area: val; }
-.item-cat > :nth-child(5) { grid-area: rem; }
+.item-cat > :nth-child(5) { grid-area: dom; }
+.item-cat > :nth-child(6) { grid-area: rem; }
 .item-srv { display: grid; gap: 8px; align-items: center; grid-template-columns: minmax(0, 1fr) 84px auto; }
 @media (min-width: 640px) {
   .item-cat {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) 70px 90px auto;
-    grid-template-areas: "cod desc un val rem";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) 70px 96px 110px auto;
+    grid-template-areas: "cod desc un val dom rem";
     padding-bottom: 0; border-bottom: 0;
   }
   .item-srv { grid-template-columns: minmax(0, 1fr) 110px auto; }
@@ -243,6 +244,12 @@ input[type="checkbox"], input[type="radio"] { width: auto; padding: 0; flex: non
 .kv .largo { grid-column: 1 / -1; }
 
 /* Itens do orçamento: lista (funciona em qualquer largura) */
+/* Local do atendimento: escolhe a tabela de preços (studio ou domicílio). */
+.local-atendimento { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin: -4px 0 14px; }
+.seg { display: inline-flex; padding: 3px; border: 1px solid var(--border-strong); border-radius: var(--pill); background: var(--surface); }
+.seg button { min-height: 36px; padding: 0 14px; border: 0; border-radius: var(--pill); background: transparent; font: 500 13px/1 var(--sans); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--primary); color: var(--primary-fg); font-weight: 600; cursor: default; }
+.seg button:disabled { opacity: 0.6; }
 .itens { list-style: none; margin: 0; padding: 0; }
 .itens li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .itens li:first-child { padding-top: 0; }
