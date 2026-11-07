@@ -26,12 +26,7 @@ No terminal, dentro de `agente/`:
 npm run google-auth
 ```
 
-O navegador abre, você autoriza o acesso à agenda e o terminal imprime a linha `GOOGLE_REFRESH_TOKEN=...` e a lista de agendas. Cole no `agente/.env`:
-
-```
-GOOGLE_REFRESH_TOKEN=...
-GOOGLE_CALENDAR_ID=primary      # ou o id da agenda impresso no terminal
-```
+O navegador abre e você autoriza o acesso à agenda. O script grava o `GOOGLE_REFRESH_TOKEN` direto no `agente/.env` (ele não aparece no terminal) e, se `GOOGLE_CALENDAR_ID` estiver vazio, usa `primary` (a agenda principal). O terminal lista as agendas da conta; para usar outra, troque `GOOGLE_CALENDAR_ID` pelo id dela.
 
 ## 3. Reiniciar o agente
 
