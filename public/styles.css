@@ -312,7 +312,6 @@ input[type="checkbox"], input[type="radio"] { width: auto; padding: 0; flex: non
 
 .saida { display: grid; gap: 12px; }
 .saida article { padding: 18px; }
-.saida pre { font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; margin: 12px 0 0; padding: 12px; background: var(--bg); border-radius: var(--r-sm); }
 
 /* Barra de ação fixa no celular */
 .acao-fixa {

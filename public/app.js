@@ -713,7 +713,6 @@ async function telaSaida() {
           <span class="label">${dataHora(s.enviadoEm)} · ${esc(s.evento)} · ${esc(s.codigo)}</span>
           ${s.mensagemSugerida ? `<p style="margin:8px 0 0">${esc(s.mensagemSugerida)}</p>` : ""}
           ${s.pdfUrl ? `<p style="margin:12px 0 0"><a class="btn pequeno" href="${esc(s.pdfUrl)}" target="_blank" rel="noopener">Abrir PDF enviado</a></p>` : ""}
-          <details><summary class="label" style="margin-top:12px;cursor:pointer">Ver dados enviados</summary><pre>${esc(JSON.stringify(s, null, 2))}</pre></details>
         </article>`).join("") : `<div class="vazio-grande"><span class="label">Vazio</span><p>Nada foi devolvido ao WhatsApp ainda.</p></div>`}
     </div>`;
 }
