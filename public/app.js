@@ -214,7 +214,7 @@ async function telaOrcamento(id) {
 
     <div class="grade">
       <aside class="coluna lateral">
-        <section class="card secao" id="card-aprov">
+        <section class="card secao" id="card-aprov" style="order:2">
           ${calc ? `<div class="resumo-total"><span class="label">Total</span><b>${brl(calc.total)}</b></div>` : ""}
           ${aprovado
             ? `<span class="ok">✓ Aprovado em ${dataHora(o.aprovadoEm)}</span>`
@@ -223,38 +223,38 @@ async function telaOrcamento(id) {
         </section>
 
         ${o.status === "falha_envio" ? `
-        <section class="card secao">
+        <section class="card secao" style="order:3">
           <p class="erro-txt" style="margin:0 0 12px">Falha no envio: ${esc(o.envios.at(-1)?.erro)}</p>
           <button class="btn cheio bloco" data-reenviar>Tentar enviar de novo</button>
         </section>` : ""}
 
         ${o.respostaCliente ? `
-        <section class="card secao">
+        <section class="card secao" style="order:4">
           <h2>Resposta da cliente <span class="label">via ${o.respostaCliente.via}</span></h2>
           <p style="margin:0"><strong style="font-weight:500">${o.respostaCliente.decisao === "aprovado" ? "Aprovou o orçamento" : "Pediu mudanças"}</strong>
           ${o.respostaCliente.comentario ? `<br><span class="muted">“${esc(o.respostaCliente.comentario)}”</span>` : ""}</p>
         </section>` : ""}
 
-        <section class="card secao">
+        <section class="card secao" style="order:9">
           <h2>Solicitar mudança</h2>
           <textarea id="mudanca" rows="3" placeholder="Ex.: incluir penteado para as madrinhas" ${podeAgir ? "" : "disabled"}></textarea>
           <button class="btn bloco" id="pedir-mudanca" style="margin-top:10px" ${podeAgir ? "" : "disabled"}>Recalcular com IA</button>
           <p class="dica">Gera um novo cálculo; depois é só aprovar de novo.</p>
         </section>
 
-        <section class="card secao pilha">
+        <section class="card secao pilha" style="order:10">
           ${calc ? `<a class="btn bloco" href="/api/orcamentos/${o.id}/pdf" target="_blank" rel="noopener">Ver PDF${aprovado ? "" : " (prévia)"}</a>` : ""}
           <a class="btn bloco" href="${esc(o.linkPublico)}" target="_blank" rel="noopener">Página da cliente ↗</a>
         </section>
       </aside>
 
       <div class="coluna">
-        <section class="card secao">
+        <section class="card secao" style="order:1">
           <h2>Orçamento</h2>
           ${calc ? blocoCalculo(o, podeAgir) : `<p class="muted" style="margin:0">Calculando… a página atualiza sozinha.</p>`}
         </section>
 
-        <section class="card secao">
+        <section class="card secao" style="order:5">
           <h2>Evento e cliente</h2>
           <dl class="kv">
             <div><dt class="label">Data</dt><dd>${esc(ev.data || "—")}</dd></div>
@@ -265,13 +265,13 @@ async function telaOrcamento(id) {
           </dl>
         </section>
 
-        <section class="card secao">
+        <section class="card secao" style="order:6">
           <h2>Briefing</h2>
           ${o.briefing.resumo ? `<p style="margin:0">${esc(o.briefing.resumo)}</p>` : ""}
           ${o.briefing.respostas.length ? `<dl class="respostas">${o.briefing.respostas.map((r) => `<div><dt class="label">${esc(r.pergunta)}</dt><dd>${esc(r.resposta)}</dd></div>`).join("")}</dl>` : ""}
         </section>
 
-        <section class="card secao">
+        <section class="card secao" style="order:7">
           <h2>Imagens do chat <span class="label">${o.imagens.length}</span></h2>
           ${o.imagens.length ? `<div class="imagens">${o.imagens.map((img) => `
             <a href="/uploads/${img.arquivo}" target="_blank" rel="noopener">
@@ -279,7 +279,7 @@ async function telaOrcamento(id) {
             </a>`).join("")}</div>` : `<p class="muted" style="margin:0">Nenhuma imagem enviada.</p>`}
         </section>
 
-        <section class="card secao">
+        <section class="card secao" style="order:8">
           <h2>Conversa no WhatsApp</h2>
           <div class="conversa">${o.conversa.map((m) => `
             <div class="msg ${m.de === "cliente" ? "cliente" : ""}">
@@ -288,7 +288,7 @@ async function telaOrcamento(id) {
           </div>
         </section>
 
-        <section class="card secao">
+        <section class="card secao" style="order:11">
           <h2>Histórico</h2>
           <ol class="historico">
             ${[...o.historico].reverse().map((h) => `<li><span class="label">${dataHora(h.em)}</span>${esc(h.evento)}${h.detalhe ? ` <span class="muted">— ${esc(h.detalhe)}</span>` : ""}</li>`).join("")}

@@ -107,8 +107,10 @@ h2 .label { font-size: 11px; }
 .progresso .barras .atual { background: var(--nude); }
 .progresso .nomes { display: none; }
 
-.grade { display: grid; gap: 12px; }
-.coluna { display: grid; gap: 12px; align-content: start; min-width: 0; }
+/* No celular as duas colunas se "dissolvem" (display: contents) e os cards seguem
+   o `order` de cada um: o detalhamento do orçamento vem primeiro. */
+.grade { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.coluna { display: contents; }
 .secao { padding: 18px; }
 
 .resumo-total { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--primary); color: var(--primary-fg); border-radius: var(--r); padding: 14px 16px; margin-bottom: 14px; }
@@ -219,6 +221,7 @@ h2 .label { font-size: 11px; }
 /* ---------- Desktop ---------- */
 @media (min-width: 1000px) {
   .grade { grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+  .coluna { display: grid; gap: 20px; align-content: start; min-width: 0; }
   .grade > .lateral { position: sticky; top: 88px; order: 2; }
   .secao { padding: 22px; }
   main { padding-bottom: 64px; }
