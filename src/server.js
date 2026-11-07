@@ -180,6 +180,9 @@ app.post("/api/orcamentos/:id/aprovar", rota(async (req, res) => {
 app.post("/api/orcamentos/:id/mudanca", rota((req, res) => {
   res.json(fluxo.solicitarMudanca(req.params.id, req.body.comentario, req.usuario));
 }));
+app.post("/api/orcamentos/:id/recalcular", rota((req, res) => {
+  res.json(fluxo.recalcular(req.params.id, req.usuario));
+}));
 app.put("/api/orcamentos/:id/calculo", rota((req, res) => {
   res.json(fluxo.editarCalculo(req.params.id, req.body, req.usuario));
 }));

@@ -188,6 +188,17 @@ export async function aprovar(id, autor = null) {
   return enviar(orc.id);
 }
 
+// Calcula de novo com os mesmos dados (ex.: a IA estava fora do ar na primeira vez).
+export function recalcular(id, autor = null) {
+  const orc = store.acharOrcamento(id);
+  exigir(orc, "aguardando_aprovacao", "mudanca_cliente", "falha_envio");
+  orc.status = "calculando";
+  historico(orc, "Novo cálculo pedido", "", autor);
+  salvar();
+  calcularEmSegundoPlano(orc.id, null);
+  return orc;
+}
+
 export function solicitarMudanca(id, comentario, autor = null) {
   const orc = store.acharOrcamento(id);
   exigir(orc, "aguardando_aprovacao", "mudanca_cliente", "falha_envio");
