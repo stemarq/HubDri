@@ -365,7 +365,6 @@ async function telaOrcamento(id) {
 
         <section class="card secao pilha" style="order:10">
           ${calc ? `<a class="btn bloco" href="/api/orcamentos/${o.id}/pdf" target="_blank" rel="noopener">Ver PDF${aprovado ? "" : " (prévia)"}</a>` : ""}
-          <a class="btn bloco" href="${esc(o.linkPublico)}" target="_blank" rel="noopener">Página da cliente ↗</a>
         </section>
       </aside>
 
