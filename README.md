@@ -109,10 +109,24 @@ npx supabase link --project-ref <id-do-projeto>
 npx supabase db push
 ```
 
-Outra opção é colar o conteúdo do arquivo no SQL Editor do painel. O hub ainda grava em `data/db.json`; a troca do `src/store.js` pelo Supabase é o próximo passo.
+Outra opção é colar o conteúdo do arquivo no SQL Editor do painel.
+
+Depois, preencha no `.env` os valores que ficam no painel do Supabase, em **Project Settings → API**:
+
+```bash
+SUPABASE_URL=https://<id-do-projeto>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<chave service_role>
+```
+
+Ao subir, o hub mostra `dados: Supabase`. Sem essas variáveis, ele continua gravando em `data/db.json`.
+
+**Como funciona:**
+- O hub carrega os orçamentos ao iniciar e trabalha com eles em memória, num processo só.
+- Cada mudança é gravada no banco em segundo plano. Se o Supabase falhar, o hub tenta de novo em 30 s.
+- As imagens do chat vão para o bucket `imagens-orcamento`. A pasta `data/uploads` passa a ser só um cache local, que pode ser apagado.
 
 ## Limitações do MVP
 
-- Armazenamento em `data/db.json` (um processo só). O esquema do Supabase já existe (ver acima), mas o hub ainda não está ligado a ele.
+- Um processo só: mesmo com o Supabase, os dados ficam em memória. Rodar duas instâncias do hub ao mesmo tempo causaria conflito.
 - Login do hub é só uma senha opcional (`HUB_PASSWORD`, HTTP Basic). Feito para uma usuária só: não há perfis nem registro de quem aprovou.
 - Notificações por polling (6 s), sem push/e-mail.
