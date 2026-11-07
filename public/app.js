@@ -342,7 +342,7 @@ async function telaOrcamento(id) {
 
     <div class="grade">
       <aside class="coluna lateral">
-        <section class="card secao" id="card-aprov" style="order:2">
+        <section class="card secao" id="card-aprov" style="order:3">
           ${calc ? `<div class="resumo-total"><span class="label">Total</span><b>${brl(calc.total)}</b></div>` : ""}
           ${aprovado
             ? `<span class="ok">✓ Aprovado em ${dataHora(o.aprovadoEm)}${o.aprovadoPorNome ? ` por ${esc(o.aprovadoPorNome)}` : ""}</span>`
@@ -351,26 +351,17 @@ async function telaOrcamento(id) {
         </section>
 
         ${o.status === "falha_envio" ? `
-        <section class="card secao" style="order:3">
+        <section class="card secao" style="order:4">
           <p class="erro-txt" style="margin:0 0 12px">Falha no envio: ${esc(o.envios.at(-1)?.erro)}</p>
           <button class="btn cheio bloco" data-reenviar>Tentar enviar de novo</button>
         </section>` : ""}
 
         ${o.respostaCliente ? `
-        <section class="card secao" style="order:4">
+        <section class="card secao" style="order:5">
           <h2>Resposta da cliente <span class="label">via ${o.respostaCliente.via}</span></h2>
           <p style="margin:0"><strong style="font-weight:500">${o.respostaCliente.decisao === "aprovado" ? "Aprovou o orçamento" : "Pediu mudanças"}</strong>
           ${o.respostaCliente.comentario ? `<br><span class="muted">“${esc(o.respostaCliente.comentario)}”</span>` : ""}</p>
         </section>` : ""}
-
-        <section class="card secao" style="order:9">
-          <h2>Solicitar mudança</h2>
-          <label class="label" for="mudanca" style="display:block;margin-bottom:6px">O que precisa mudar?</label>
-          <textarea id="mudanca" rows="3" placeholder="Ex.: incluir penteado para as madrinhas" aria-describedby="mudanca-erro" ${podeAgir ? "" : "disabled"}></textarea>
-          <p class="erro-campo" id="mudanca-erro" hidden>Escreva o que deve mudar antes de recalcular.</p>
-          <button class="btn bloco" id="pedir-mudanca" style="margin-top:10px" ${podeAgir ? "" : "disabled"}>Recalcular com IA</button>
-          <p class="dica">Gera um novo cálculo; depois é só aprovar de novo.</p>
-        </section>
 
         <section class="card secao pilha" style="order:10">
           ${calc ? `<a class="btn bloco" href="/api/orcamentos/${o.id}/pdf" target="_blank" rel="noopener">Ver PDF${aprovado ? "" : " (prévia)"}</a>` : ""}
@@ -385,7 +376,16 @@ async function telaOrcamento(id) {
           ${calc ? blocoCalculo(o, podeAgir) : ""}
         </section>
 
-        <section class="card secao" style="order:5">
+        <section class="card secao" style="order:2">
+          <h2>Solicitar mudança</h2>
+          <label class="label" for="mudanca" style="display:block;margin-bottom:6px">O que precisa mudar?</label>
+          <textarea id="mudanca" rows="3" placeholder="Ex.: incluir penteado para as madrinhas" aria-describedby="mudanca-erro" ${podeAgir ? "" : "disabled"}></textarea>
+          <p class="erro-campo" id="mudanca-erro" hidden>Escreva o que deve mudar antes de recalcular.</p>
+          <button class="btn bloco" id="pedir-mudanca" style="margin-top:10px" ${podeAgir ? "" : "disabled"}>Recalcular com IA</button>
+          <p class="dica">Gera um novo cálculo; depois é só aprovar de novo.</p>
+        </section>
+
+        <section class="card secao" style="order:6">
           <h2>Evento e cliente</h2>
           <dl class="kv">
             <div><dt class="label">Data</dt><dd>${esc(ev.data || "—")}</dd></div>
@@ -396,13 +396,13 @@ async function telaOrcamento(id) {
           </dl>
         </section>
 
-        <section class="card secao" style="order:6">
+        <section class="card secao" style="order:7">
           <h2>Briefing</h2>
           ${o.briefing.resumo ? `<p style="margin:0">${esc(o.briefing.resumo)}</p>` : ""}
           ${o.briefing.respostas.length ? `<dl class="respostas">${o.briefing.respostas.map((r) => `<div><dt class="label">${esc(r.pergunta)}</dt><dd>${esc(r.resposta)}</dd></div>`).join("")}</dl>` : ""}
         </section>
 
-        <section class="card secao" style="order:7">
+        <section class="card secao" style="order:8">
           <h2>Imagens do chat <span class="label">${o.imagens.length}</span></h2>
           ${o.imagens.length ? `<div class="imagens">${o.imagens.map((img) => `
             <a href="/uploads/${img.arquivo}" target="_blank" rel="noopener">
@@ -410,7 +410,7 @@ async function telaOrcamento(id) {
             </a>`).join("")}</div>` : `<p class="muted" style="margin:0">Nenhuma imagem enviada.</p>`}
         </section>
 
-        <section class="card secao" style="order:8">
+        <section class="card secao" style="order:9">
           <h2>Conversa com a cliente</h2>
           <div class="conversa">${o.conversa.map((m) => `
             <div class="msg ${m.de === "cliente" ? "cliente" : ""}">
