@@ -31,3 +31,4 @@ section { margin-top: 20px; padding: 20px; background: var(--surface); border: 1
 .erro, .sucesso { margin: 0 0 16px; }
 .sucesso { color: var(--cacau); background: var(--creme); border: 1px solid var(--nude); padding: 10px 14px; border-radius: var(--r-sm); font-size: 14px; }
 .acesso .acoes { margin-top: 18px; }
+.btn { gap: 10px; }

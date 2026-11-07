@@ -1,5 +1,6 @@
 // Telas de acesso do hub: entrar, esqueci a senha, definir senha e acesso bloqueado.
 import { config } from "./config.js";
+import { SCRIPT_ENVIO } from "./envio-formulario.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -18,7 +19,7 @@ function layout(titulo, corpo, script = "") {
   <header><strong>${esc(empresa)}</strong><span class="label">Acesso da equipe</span></header>
   ${corpo}
 </main>
-${script ? `<script>${script}</script>` : ""}
+<script>${SCRIPT_ENVIO}${script}</script>
 </body></html>`;
 }
 
@@ -41,7 +42,7 @@ export function paginaEntrar({ erro, ok, email } = {}) {
         <input type="email" name="email" value="${esc(email)}" autocomplete="username" inputmode="email" required ${email ? "" : "autofocus"}></label>
       <label class="campo"><span class="label">Senha</span>
         <input type="password" name="senha" autocomplete="current-password" required ${email ? "autofocus" : ""}></label>
-      <button class="btn cheio">Entrar</button>
+      <button class="btn cheio" data-carregando="Entrando…">Entrar</button>
     </form>
     <p class="dica"><a href="/esqueci-senha">Esqueci minha senha</a></p>
   </section>`, SCRIPT_REDIRECIONA_LINK);
@@ -60,7 +61,7 @@ export function paginaEsqueciSenha({ erro, enviado } = {}) {
          <form method="post" action="/esqueci-senha" class="formulario">
            <label class="campo"><span class="label">E-mail</span>
              <input type="email" name="email" autocomplete="username" inputmode="email" required autofocus></label>
-           <button class="btn cheio">Enviar link</button>
+           <button class="btn cheio" data-carregando="Enviando…">Enviar link</button>
          </form>`}
     <p class="dica"><a href="/login">Voltar para entrar</a></p>
   </section>`);
@@ -80,7 +81,7 @@ export function paginaDefinirSenha({ erro } = {}) {
       <label class="campo"><span class="label">Repita a senha</span>
         <input type="password" name="confirmacao" autocomplete="new-password" minlength="8" required></label>
       <p class="dica esquerda">Use pelo menos 8 caracteres.</p>
-      <button class="btn cheio">Salvar senha e entrar</button>
+      <button class="btn cheio" data-carregando="Salvando…">Salvar senha e entrar</button>
     </form>
     <p class="dica"><a href="/login">Voltar para entrar</a></p>
   </section>`, `
@@ -111,6 +112,6 @@ export function paginaBloqueado(perfil) {
     <p class="label">Conta bloqueada</p>
     <h2>Seu acesso ao hub está bloqueado.</h2>
     <p>${perfil?.email ? `Você entrou como <strong>${esc(perfil.email)}</strong>. ` : ""}Fale com a responsável pelo hub para liberar de novo.</p>
-    <form method="post" action="/sair" class="acoes"><button class="btn">Sair</button></form>
+    <form method="post" action="/sair" class="acoes"><button class="btn" data-carregando="Saindo…">Sair</button></form>
   </section>`);
 }

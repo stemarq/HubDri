@@ -1,6 +1,7 @@
 // Página pública aberta pelo botão do PDF: a cliente aprova o orçamento.
 // Pedidos de ajuste não são feitos aqui — ficam na conversa do WhatsApp.
 import { config } from "./config.js";
+import { SCRIPT_ENVIO } from "./envio-formulario.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -24,11 +25,11 @@ export function paginaCliente(orc, { erro } = {}) {
       <p>A versão atualizada chega pela conversa do WhatsApp.</p>`;
   } else if (orc.status === "enviado") {
     corpo = `
-      ${erro ? `<p class="erro">${esc(erro)}</p>` : ""}
+      ${erro ? `<p class="erro" role="alert">${esc(erro)}</p>` : ""}
       <p class="label">Próximo passo</p>
       <h2>Está tudo certo com o orçamento?</h2>
       <form method="post" action="/p/${orc.tokenPublico}/resposta" class="acoes">
-        <button name="decisao" value="aprovado" class="btn cheio">Aprovar orçamento</button>
+        <button name="decisao" value="aprovado" class="btn cheio" data-carregando="Registrando…">Aprovar orçamento</button>
       </form>
       <p class="dica">Quer ajustar alguma coisa? É só responder na conversa do WhatsApp.</p>`;
   } else {
@@ -54,5 +55,6 @@ export function paginaCliente(orc, { erro } = {}) {
   ${disponivel ? `<a class="btn pequeno pdf" href="${pdf}" target="_blank" rel="noopener">Abrir PDF completo ↗</a>` : ""}
   <section>${corpo}</section>
 </main>
+<script>${SCRIPT_ENVIO}</script>
 </body></html>`;
 }
