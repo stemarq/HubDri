@@ -265,7 +265,7 @@ export async function enviar(id) {
       linkAprovacao: linkPublico(orc),
       mensagemSugerida:
         `Oi${primeiroNome ? " " + primeiroNome : ""}! Seu orçamento ${orc.codigo} está pronto. ` +
-        `Segue o PDF com todos os detalhes. Se estiver tudo certo, é só aprovar pelo botão do PDF. ` +
+        `Segue o PDF com todos os detalhes. Se estiver tudo certo, é só me responder por aqui confirmando. ` +
         `Se quiser ajustar alguma coisa, me conta por aqui mesmo.`,
     });
     orc.status = "enviado";

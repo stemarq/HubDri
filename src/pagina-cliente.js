@@ -1,4 +1,4 @@
-// Página pública aberta pelo botão do PDF: a cliente aprova o orçamento.
+// Página pública de aprovação (o link vai na conversa, junto com o PDF): a cliente aprova o orçamento.
 // Pedidos de ajuste não são feitos aqui — ficam na conversa do WhatsApp.
 import { config } from "./config.js";
 import { SCRIPT_ENVIO } from "./envio-formulario.js";
