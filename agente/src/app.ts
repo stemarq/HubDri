@@ -17,6 +17,7 @@ import { RouteError } from './services/transport.js';
 import * as A from './services/analytics.js';
 import { FailureError, listFailures, rateMessage, ratingsSummary, resolveFailure } from './services/failures.js';
 import { eraseCustomerData, getMemory } from './services/memory.js';
+import { handleHubCallback, pushToHub } from './services/hub.js';
 import { SETTING_SCHEMAS, SettingKey, PricingSettingsInput, getSetting, readPricingSettings, setSetting, writePricingSettings } from './services/settings.js';
 import { localToEpoch, parseHM, toIso } from './lib/time.js';
 import { logger } from './lib/logger.js';
@@ -54,6 +55,14 @@ export function createApp(ctx: Ctx) {
   // ---------- Simulador (página pública; as chamadas exigem o token) ----------
   app.get('/simulator', (_q, res) => res.sendFile(resolve('public/simulator.html')));
 
+  // ---------- Callback do hub (token próprio; antes da autenticação admin) ----------
+  app.post('/api/hub/callback', wrap(async (req, res) => {
+    const expected = ctx.config.hub.callbackToken;
+    if (!ctx.hub || !expected) return res.status(503).json({ error: 'HUB_NOT_CONFIGURED' });
+    if (!timingSafeEqual(sha(String(req.header('x-hub-token') ?? '')), sha(expected))) return res.status(401).json({ error: 'UNAUTHORIZED' });
+    res.json(await handleHubCallback(ctx, req.body));
+  }));
+
   // ---------- Autenticação admin ----------
   app.use('/api', (req, res, next) => {
     if (!ctx.config.adminToken) return res.status(503).json({ error: 'ADMIN_TOKEN_NOT_CONFIGURED' });
@@ -77,9 +86,9 @@ export function createApp(ctx: Ctx) {
   // ---------- Conversas ----------
   const convSummary = (c: any) => {
     const last = one(ctx.db, 'SELECT body,direction,created_at FROM messages WHERE conversation_id=? ORDER BY created_at DESC LIMIT 1', c.id);
-    const q = one(ctx.db, 'SELECT id,status FROM quotes WHERE conversation_id=? ORDER BY created_at DESC LIMIT 1', c.id);
+    const q = one(ctx.db, 'SELECT id,status,hub_id,hub_code FROM quotes WHERE conversation_id=? ORDER BY created_at DESC LIMIT 1', c.id);
     return { id: c.id, customer: { id: c.customer_id, name: c.name, waId: c.wa_id }, channel: c.channel, mode: c.mode,
-      lastMessage: last ? { body: last.body, direction: last.direction, at: last.created_at } : null, latestQuote: q ? { id: q.id, status: q.status } : null, updatedAt: c.updated_at };
+      lastMessage: last ? { body: last.body, direction: last.direction, at: last.created_at } : null, latestQuote: q ? { id: q.id, status: q.status, hubId: q.hub_id ?? null, hubCode: q.hub_code ?? null } : null, updatedAt: c.updated_at };
   };
   app.get('/api/conversations', (_q, res) => res.json({ conversations: all(ctx.db, 'SELECT c.*, u.name, u.wa_id FROM conversations c JOIN customers u ON u.id=c.customer_id ORDER BY c.updated_at DESC').map(convSummary) }));
   app.get('/api/conversations/:id', (req, res) => {
@@ -151,6 +160,12 @@ export function createApp(ctx: Ctx) {
   app.post('/api/quotes/:id/send', wrap(async (req, res) => res.json(await Q.sendQuote(ctx, req.params.id, actorOf(req)))));
   app.post('/api/quotes/:id/accept', wrap(async (req, res) => res.json(await Q.acceptQuote(ctx, req.params.id, actorOf(req)))));
   app.post('/api/quotes/:id/lost', wrap((req, res) => res.json(Q.markLost(ctx, req.params.id, z.object({ reason: z.string().max(300).optional() }).parse(req.body ?? {}).reason, actorOf(req)))));
+  app.post('/api/quotes/:id/push-hub', wrap(async (req, res) => {
+    if (!ctx.hub) return res.status(409).json({ error: 'HUB_NOT_CONFIGURED' });
+    if (!one(ctx.db, 'SELECT id FROM quotes WHERE id=?', req.params.id)) return res.status(404).json({ error: 'QUOTE_NOT_FOUND' });
+    const r = await pushToHub(ctx, req.params.id);
+    res.status(r.ok ? 200 : 502).json(r);
+  }));
   app.post('/api/quotes/:id/pdf/regenerate', wrap(async (req, res) => res.json(await Q.regeneratePdf(ctx, req.params.id))));
   app.get('/api/quotes/:id/pdf', (req, res) => {
     const q = one(ctx.db, 'SELECT pdf_path FROM quotes WHERE id=?', req.params.id);

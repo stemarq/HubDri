@@ -12,7 +12,8 @@
     "seed:demo": "tsx src/scripts/seedDemo.ts",
     "demo": "tsx src/scripts/demo.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "google-auth": "tsx src/scripts/googleAuth.ts"
   },
   "dependencies": {
     "express": "^4.22.3",

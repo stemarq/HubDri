@@ -11,6 +11,7 @@ import { CalendarError } from './calendar.js';
 import { SendResult } from './outbound.js';
 import { ChannelError } from '../channels/types.js';
 import { logger } from '../lib/logger.js';
+import { pushToHub } from './hub.js';
 
 export interface Slots {
   service?: string; role?: string; eventType?: string;
@@ -99,6 +100,11 @@ export async function buildQuote(ctx: Ctx, conv: Row, s: Slots): Promise<BuildRe
   });
   ctx.events.emit('QUOTE_GENERATED', { quoteId: id, service: s.service, totalCents: price.totalCents });
 
+  // Com hub configurado, quem calcula o preço e gera o PDF é o hub (a Adriana aprova no app): o agente só envia o lead.
+  if (ctx.hub) {
+    const r = await pushToHub(ctx, id);
+    return { kind: 'created', quoteId: id, status: r.ok ? 'IN_HUB' : 'NEEDS_REVIEW' };
+  }
   // PDF sempre que houver preço completo (inclusive como rascunho em revisão); sem preço não há o que mostrar.
   if (price.missing.length === 0) await finalizePdf(ctx, id);
   const q = one(ctx.db, 'SELECT status, review_reasons FROM quotes WHERE id=?', id)!;
@@ -145,7 +151,7 @@ export function quoteView(ctx: Ctx, id: string, withConversation = false) {
   const cust = one(ctx.db, 'SELECT id,wa_id,name FROM customers WHERE id=?', q.customer_id);
   const svc = one(ctx.db, 'SELECT name FROM services WHERE code=?', q.service_code);
   const view: Record<string, unknown> = {
-    id: q.id, number: q.number, status: q.status, conversationId: q.conversation_id,
+    id: q.id, number: q.number, status: q.status, conversationId: q.conversation_id, hub: q.hub_id ? { id: q.hub_id, code: q.hub_code, status: q.hub_status } : null,
     customer: cust ? { id: cust.id, name: cust.name, waId: cust.wa_id } : null,
     service: { code: q.service_code, name: svc?.name }, event: parse(q.event, {}), schedule: parse(q.schedule, {}), availability: parse(q.availability, {}),
     items: all(ctx.db, 'SELECT kind,label,amount_cents FROM quote_items WHERE quote_id=? ORDER BY position', id).map((r) => ({ kind: r.kind, label: r.label, amountCents: r.amount_cents,

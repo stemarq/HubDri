@@ -53,6 +53,7 @@ export function openDb(path: string): DB {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  for (const col of ['hub_id TEXT', 'hub_code TEXT', 'hub_status TEXT']) { try { db.exec(`ALTER TABLE quotes ADD COLUMN ${col}`); } catch { /* já existe */ } }
   seedServices(db);
   return db;
 }

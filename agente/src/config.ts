@@ -11,6 +11,7 @@ export interface Config {
   hubWebhookUrl?: string;
   hubWebhookSecret?: string;
   chromePath?: string;
+  hub: { url?: string; webhookToken?: string; callbackToken?: string };
   llm: { anthropicApiKey?: string; model: string };
   openaiApiKey?: string;
 }
@@ -18,7 +19,7 @@ export interface Config {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const mapsApiKey = env.GOOGLE_MAPS_API_KEY || undefined;
   return {
-    port: Number(env.PORT ?? 3000),
+    port: Number(env.ADRI_PORT ?? 3001),
     adminToken: env.ADMIN_API_TOKEN || undefined,
     dbPath: env.DB_PATH ?? 'data/adri.db',
     dataDir: env.DATA_DIR ?? 'data',
@@ -42,6 +43,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     hubWebhookUrl: env.HUB_WEBHOOK_URL || undefined,
     hubWebhookSecret: env.HUB_WEBHOOK_SECRET || undefined,
     chromePath: env.CHROME_PATH || undefined,
+    hub: { url: (env.HUB_URL || '').replace(/\/$/, '') || undefined, webhookToken: env.HUB_WEBHOOK_TOKEN || undefined, callbackToken: env.HUB_CALLBACK_TOKEN || env.WHATSAPP_CALLBACK_TOKEN || undefined },
     llm: { anthropicApiKey: env.ANTHROPIC_API_KEY || undefined, model: env.LLM_MODEL || 'claude-haiku-5-5' },
     openaiApiKey: env.OPENAI_API_KEY || undefined,
   };
