@@ -11,13 +11,15 @@ import { leadExemplo } from "./simulador.js";
 import { paginaCliente } from "./pagina-cliente.js";
 import { loginAtivo, exigirLogin, rotasDeAcesso } from "./auth.js";
 import { rotasConversas } from "./conversas.js";
+import { rotasConfiguracoes } from "./configuracoes.js";
 
 const app = express();
 app.use(express.json({ limit: "40mb" }));
 app.use(express.urlencoded({ extended: false }));
 
+// .then() pega também os erros lançados na hora (rotas síncronas); antes eles viravam uma página HTML do Express.
 const rota = (fn) => (req, res) =>
-  Promise.resolve(fn(req, res)).catch((e) => {
+  Promise.resolve().then(() => fn(req, res)).catch((e) => {
     if (!(e instanceof ErroFluxo)) console.error(e);
     res.status(e.status || 500).json({ erro: e.message });
   });
@@ -106,6 +108,7 @@ function autenticar(req, res, next) {
 }
 app.use(loginAtivo ? exigirLogin : autenticar);
 rotasConversas(app, rota); // conversas da ADRI (agente/) dentro do hub
+rotasConfiguracoes(app, rota); // preços, regras e respostas editáveis no app
 app.use(express.static(path.resolve("public")));
 // Imagens do chat: só serve arquivos que pertencem a algum orçamento (vindas do Storage ou do disco).
 app.get("/uploads/:orcamento/:arquivo", rota(async (req, res) => {
@@ -180,6 +183,9 @@ app.post("/api/orcamentos/:id/aprovar", rota(async (req, res) => {
 }));
 app.post("/api/orcamentos/:id/mudanca", rota((req, res) => {
   res.json(fluxo.solicitarMudanca(req.params.id, req.body.comentario, req.usuario));
+}));
+app.post("/api/orcamentos/:id/recalcular", rota((req, res) => {
+  res.json(fluxo.recalcular(req.params.id, req.usuario));
 }));
 app.put("/api/orcamentos/:id/calculo", rota((req, res) => {
   res.json(fluxo.editarCalculo(req.params.id, req.body, req.usuario));

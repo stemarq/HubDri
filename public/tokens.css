@@ -68,6 +68,7 @@ img { max-width: 100%; }
 .btn.pequeno { min-height: 36px; padding: 0 14px; font-size: 13px; }
 .btn.bloco { width: 100%; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn[aria-busy="true"]:disabled { opacity: 1; cursor: progress; }
 .btn:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 2px solid var(--primary); outline-offset: 2px;
 }
@@ -80,3 +81,13 @@ input:focus, textarea:focus, select:focus { border-color: var(--primary); outlin
 textarea { resize: vertical; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow); }
+
+/* Carregamento */
+.spinner {
+  width: 16px; height: 16px; flex: none; display: inline-block; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent; animation: girar 0.8s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; border-right-color: currentColor; opacity: 0.5; }
+}

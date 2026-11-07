@@ -5,8 +5,16 @@ const arquivo = path.resolve("config", "hub.config.json");
 
 // Relido a cada uso: editar o catálogo não exige reiniciar o servidor.
 export function config() {
-  return JSON.parse(fs.readFileSync(arquivo, "utf8"));
+  const base = JSON.parse(fs.readFileSync(arquivo, "utf8"));
+  // Edições feitas no app (aba Configurações) ficam em data/config-editada.json, fora do Git, e valem sobre o arquivo base.
+  try {
+    const editada = JSON.parse(fs.readFileSync(arquivoEditado, "utf8"));
+    return { ...base, ...editada, empresa: { ...base.empresa, ...(editada.empresa || {}) } };
+  } catch {
+    return base;
+  }
 }
+export const arquivoEditado = path.resolve("data", "config-editada.json");
 
 export const env = {
   port: Number(process.env.PORT || 3000),
