@@ -112,12 +112,11 @@ O hub faz `POST` (header `x-hub-token: $WHATSAPP_CALLBACK_TOKEN`) com:
   "total": 1890, "validadeDias": 7,
   "dadosEvento": { "tipo": "Casamento", "data": "12/12/2026", "horario": "06:00", "local": "Campinas/SP" },
   "pdfUrl": "https://hub/p/<token>/orcamento.pdf",
-  "linkAprovacao": "https://hub/p/<token>",
   "mensagemSugerida": "Oi Mariana! Seu orçamento ORC-0001 está pronto…"
 }
 ```
 
-O retorno **não** traz link para a cliente pedir alterações — só `linkAprovacao`. Quando ela aprova por esse link, o hub envia `{"evento": "resposta_cliente", "decisao": "aprovado", …}` para a mesma URL.
+A cliente recebe **só o PDF** com a `mensagemSugerida`, sem link nenhum: o `pdfUrl` serve apenas para a IA baixar o arquivo. Ela confirma ou pede ajustes respondendo na conversa, e a IA repassa pelo webhook abaixo.
 
 ### 3. Repassar a resposta dada no chat — `POST /api/webhooks/whatsapp/resposta`
 

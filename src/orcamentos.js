@@ -304,8 +304,8 @@ export async function enviar(id) {
       total: orc.calculo.total,
       dadosEvento: orc.evento,
       validadeDias: orc.calculo.validadeDias,
+      // O pdfUrl é só para a IA baixar o arquivo; a cliente recebe o PDF, sem link nenhum.
       pdfUrl: linkPdf(orc),
-      linkAprovacao: linkPublico(orc),
       mensagemSugerida:
         `Oi${primeiroNome ? " " + primeiroNome : ""}! Seu orçamento ${orc.codigo} está pronto. ` +
         `Segue o PDF com todos os detalhes. Se estiver tudo certo, é só me responder por aqui confirmando. ` +

@@ -126,9 +126,9 @@ export async function handleHubCallback(ctx: Ctx, b: any): Promise<{ ok: true; i
     try { await ctx.hub!.downloadPdf(b.pdfUrl, dest); } catch (e) { throw new QuoteError('PDF_DOWNLOAD_FAILED', 502, (e as Error).message); }
     run(ctx.db, "UPDATE quotes SET pdf_path=?, total_cents=?, approved_at=COALESCE(approved_at, ?), updated_at=? WHERE id=?", dest, Math.round(Number(b.total ?? 0) * 100), now, now, q.id);
     const caption = String(b.mensagemSugerida ?? 'Aqui está a sua proposta 💗');
+    // Só o PDF com a mensagem: nada de link. A cliente confirma ou pede ajustes respondendo na conversa.
     try {
       await ctx.outbound.sendQuoteDocument(q.conversation_id, dest, caption, { idemKey: `hub-send:${b.orcamentoId}:${b.enviadoEm ?? now}`, author: 'ADRIANA' });
-      if (b.linkAprovacao) await ctx.outbound.sendText(q.conversation_id, `Para aprovar é só tocar aqui: ${b.linkAprovacao}\nSe quiser ajustar algo, me conta por aqui mesmo 💗`, { author: 'ADRI', idemKey: `hub-link:${b.orcamentoId}:${b.enviadoEm ?? now}` });
     } catch (e) { throw new QuoteError('SEND_FAILED', 502, (e as Error).message); }
     run(ctx.db, "UPDATE quotes SET status='SENT', sent_at=?, hub_status='enviado' WHERE id=?", now, q.id);
     ctx.events.emit('QUOTE_APPROVED', { quoteId: q.id, via: 'hub' });
