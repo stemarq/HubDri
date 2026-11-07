@@ -16,28 +16,109 @@ function haQuanto(iso) {
   return `há ${Math.floor(h / 24)} d ${h % 24} h`;
 }
 
+class ErroConexao extends Error {}
+
 async function api(url, opts = {}) {
-  const r = await fetch(url, {
-    ...opts,
-    headers: { "content-type": "application/json", ...(opts.headers || {}) },
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
+  let r;
+  try {
+    r = await fetch(url, {
+      ...opts,
+      headers: { "content-type": "application/json", ...(opts.headers || {}) },
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+  } catch {
+    throw new ErroConexao("Sem conexão com o servidor. Confira a internet e tente de novo.");
+  }
   // Sessão expirada ou encerrada: volta para a tela de login.
   if (r.status === 401 && (!meta || meta.usuario)) {
     location.href = "/login";
     return new Promise(() => {});
   }
   const dados = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(dados.erro || `Erro ${r.status}`);
+  if (!r.ok) throw new Error(dados.erro || (r.status >= 500 ? "O servidor teve um problema. Tente de novo em instantes." : `Erro ${r.status}`));
   return dados;
 }
 
-function avisar(msg) {
-  const el = $("#aviso");
-  el.textContent = msg;
-  el.hidden = false;
-  clearTimeout(avisar.t);
-  avisar.t = setTimeout(() => (el.hidden = true), 4000);
+// ---------- Avisos (toasts) ----------
+// tipo: "sucesso" | "erro" | "info". Erros ficam mais tempo e são anunciados na hora (role=alert).
+
+const ICONE_AVISO = { sucesso: "✓", erro: "!", info: "i" };
+
+function avisar(msg, tipo = "sucesso", titulo = "") {
+  const pilha = $("#avisos");
+  const el = document.createElement("div");
+  el.className = `toast ${tipo}`;
+  el.setAttribute("role", tipo === "erro" ? "alert" : "status");
+  el.innerHTML = `
+    <span class="toast-icone" aria-hidden="true">${ICONE_AVISO[tipo]}</span>
+    <span>${titulo ? `<span class="toast-titulo">${esc(titulo)}</span>` : ""}${esc(msg)}</span>
+    <button class="toast-fechar" aria-label="Fechar aviso">×</button>`;
+  el.querySelector(".toast-fechar").addEventListener("click", () => el.remove());
+  pilha.prepend(el);
+  while (pilha.children.length > 3) pilha.lastElementChild.remove();
+  setTimeout(() => el.remove(), tipo === "erro" ? 9000 : 4500);
+}
+const avisarErro = (e, titulo = "Não deu certo") => avisar(e.message || String(e), "erro", titulo);
+
+// ---------- Popup de confirmação ----------
+// confirmar({ titulo, texto (HTML já escapado), ok, cancelar }) → Promise<boolean>
+
+function confirmar({ titulo, texto, ok = "Confirmar", cancelar = "Cancelar" }) {
+  const d = $("#dialogo");
+  d.innerHTML = `
+    <form method="dialog" class="dialogo-corpo">
+      <h2 id="dialogo-titulo">${esc(titulo)}</h2>
+      <div class="dialogo-texto">${texto}</div>
+      <div class="dialogo-botoes">
+        <button class="btn" value="nao">${esc(cancelar)}</button>
+        <button class="btn cheio" value="sim">${esc(ok)}</button>
+      </div>
+    </form>`;
+  d.returnValue = "";
+  return new Promise((resolve) => {
+    d.addEventListener("close", () => resolve(d.returnValue === "sim"), { once: true });
+    d.showModal();
+    d.querySelector('[value="sim"]').focus();
+  });
+}
+// Clique fora do cartão fecha (= cancelar).
+$("#dialogo").addEventListener("click", (e) => { if (e.target.id === "dialogo") e.target.close("nao"); });
+
+// ---------- Botão ocupado ----------
+// Desativa as ações da tela e mostra o progresso no botão clicado. A tela é redesenhada depois.
+
+function ocupar(botao, texto) {
+  document.querySelectorAll("#app button, .acao-fixa button").forEach((b) => (b.disabled = true));
+  botao.setAttribute("aria-busy", "true");
+  botao.innerHTML = `<span class="spinner" aria-hidden="true"></span>${esc(texto)}`;
+}
+
+// ---------- Esqueletos (enquanto a tela carrega) ----------
+
+function esqueleto(tela) {
+  const sr = `<span class="sr">Carregando…</span>`;
+  if (tela === "orcamento") return `
+    <div class="esqueleto" aria-busy="true">${sr}
+      <span class="esq linha" style="width:64px"></span>
+      <span class="esq linha" style="width:46%"></span>
+      <span class="esq titulo"></span>
+      <span class="esq card" style="height:70px"></span>
+      <span class="esq bloco"></span>
+      <span class="esq bloco" style="height:140px"></span>
+    </div>`;
+  return `
+    <div class="esqueleto" aria-busy="true">${sr}
+      <span class="esq linha" style="width:40%"></span>
+      <span class="esq titulo" style="width:45%"></span>
+      <span class="esq linha" style="width:260px;height:40px;border-radius:999px;margin-bottom:6px"></span>
+      <span class="esq card"></span><span class="esq card"></span><span class="esq card"></span>
+    </div>`;
+}
+
+// ---------- Conexão ----------
+
+function conexao(ok) {
+  $("#conexao").hidden = ok;
 }
 
 // ---------- Dropdown personalizado ----------
@@ -126,12 +207,23 @@ $("#lista-notif").addEventListener("click", async (e) => {
   const a = e.target.closest("[data-notif]");
   if (!a) return;
   painel.hidden = true;
-  await api("/api/notificacoes/lidas", { method: "POST", body: { ids: [a.dataset.notif] } });
-  carregarNotificacoes();
+  try {
+    await api("/api/notificacoes/lidas", { method: "POST", body: { ids: [a.dataset.notif] } });
+    await carregarNotificacoes();
+  } catch { /* marcar como lida é secundário: a navegação segue */ }
 });
-$("#ler-todas").addEventListener("click", async () => {
-  await api("/api/notificacoes/lidas", { method: "POST", body: {} });
-  carregarNotificacoes();
+$("#ler-todas").addEventListener("click", async (e) => {
+  const b = e.currentTarget;
+  b.disabled = true;
+  try {
+    await api("/api/notificacoes/lidas", { method: "POST", body: {} });
+    await carregarNotificacoes();
+    avisar("Todas as notificações foram marcadas como lidas.", "info");
+  } catch (err) {
+    avisarErro(err, "Não foi possível marcar as notificações");
+  } finally {
+    b.disabled = false;
+  }
 });
 
 // ---------- Conta (login) ----------
@@ -157,10 +249,15 @@ document.addEventListener("click", (e) => {
   if (!e.target.closest(".conta")) { $("#painel-conta").hidden = true; $("#avatar").setAttribute("aria-expanded", "false"); }
 });
 
-async function simularLead() {
-  const r = await api("/api/dev/simular", { method: "POST" });
-  avisar(`Lead simulado recebido: ${r.codigo}`);
-  carregarNotificacoes();
+async function simularLead(e) {
+  ocupar(e.currentTarget, "Simulando…");
+  try {
+    const r = await api("/api/dev/simular", { method: "POST" });
+    avisar(`${r.codigo} entrou na fila. O cálculo começa agora.`, "sucesso", "Lead simulado recebido");
+    carregarNotificacoes().catch(() => {});
+  } catch (err) {
+    avisarErro(err, "Não foi possível simular o lead");
+  }
   render();
 }
 
@@ -265,7 +362,9 @@ async function telaOrcamento(id) {
 
         <section class="card secao" style="order:9">
           <h2>Solicitar mudança</h2>
-          <textarea id="mudanca" rows="3" placeholder="Ex.: incluir penteado para as madrinhas" ${podeAgir ? "" : "disabled"}></textarea>
+          <label class="label" for="mudanca" style="display:block;margin-bottom:6px">O que precisa mudar?</label>
+          <textarea id="mudanca" rows="3" placeholder="Ex.: incluir penteado para as madrinhas" aria-describedby="mudanca-erro" ${podeAgir ? "" : "disabled"}></textarea>
+          <p class="erro-campo" id="mudanca-erro" hidden>Escreva o que deve mudar antes de recalcular.</p>
           <button class="btn bloco" id="pedir-mudanca" style="margin-top:10px" ${podeAgir ? "" : "disabled"}>Recalcular com IA</button>
           <p class="dica">Gera um novo cálculo; depois é só aprovar de novo.</p>
         </section>
@@ -279,7 +378,8 @@ async function telaOrcamento(id) {
       <div class="coluna">
         <section class="card secao" style="order:1">
           <h2>Orçamento</h2>
-          ${calc ? blocoCalculo(o, podeAgir) : `<p class="muted" style="margin:0">Calculando… a página atualiza sozinha.</p>`}
+          ${o.status === "calculando" ? cartaoCalculando(Boolean(calc)) : ""}
+          ${calc ? blocoCalculo(o, podeAgir) : ""}
         </section>
 
         <section class="card secao" style="order:5">
@@ -359,7 +459,20 @@ function blocoCalculo(o, podeAgir) {
   const desc = editando ? edicao.descontoPercentual : c.descontoPercentual;
   const total = subtotal - subtotal * (desc || 0) / 100;
 
+  const falhaIa = c.pontosDeAtencao?.find((p) => p.startsWith("IA falhou"));
+  // O alerta já explica a falha; o aviso genérico das regras sairia repetido.
+  const pontos = (c.pontosDeAtencao || []).filter((p) => !falhaIa || (p !== falhaIa && !p.startsWith("Calculado por regras automáticas")));
+  const motivoIa = falhaIa?.match(/^IA falhou \((.*)\); cálculo feito por regras\.$/)?.[1];
   return `
+    ${falhaIa && !editando && podeAgir ? `
+      <div class="alerta" role="note">
+        <span class="alerta-icone" aria-hidden="true">!</span>
+        <div>
+          <strong>A IA não conseguiu calcular este orçamento</strong>
+          <span>${esc(motivoIa || falhaIa)} Os itens abaixo vieram das regras automáticas: revise antes de aprovar.</span>
+          ${meta.iaDisponivel ? `<br><button class="btn pequeno" data-recalcular>Tentar com a IA de novo</button>` : ""}
+        </div>
+      </div>` : ""}
     <p class="label" style="margin:-6px 0 14px">${c.geradoPor === "ia" ? `Gerado pela IA${c.ia ? ` (${esc(c.ia)})` : ""}` : "Gerado por regras"} · ${dataHora(c.geradoEm)}${c.editadoManualmente ? " · editado" : ""}</p>
     <ul class="itens">${linhas || `<li class="muted">Nenhum item.</li>`}</ul>
     ${editando ? `
@@ -383,48 +496,133 @@ function blocoCalculo(o, podeAgir) {
         : podeAgir ? `<button class="btn" id="editar">Editar itens</button>` : ""}
     </div>
     ${c.justificativa ? `<p class="como"><span class="label">Como foi calculado</span><br>${esc(c.justificativa)}</p>` : ""}
-    ${c.pontosDeAtencao?.length ? `<div class="atencao"><span class="label">Pontos de atenção</span><ul>${c.pontosDeAtencao.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>` : ""}`;
+    ${pontos.length ? `<div class="atencao"><span class="label">Pontos de atenção</span><ul>${pontos.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>` : ""}`;
+}
+
+function cartaoCalculando(recalculo) {
+  const quem = meta.ia ? `A IA (${esc(meta.ia)}) está lendo a conversa e as fotos.` : "O cálculo pelas regras automáticas está em andamento.";
+  return `
+    <div class="calculando" role="status">
+      <span class="spinner grande" aria-hidden="true"></span>
+      <div>
+        <strong>${recalculo ? "Recalculando o orçamento…" : "Calculando o orçamento…"}</strong>
+        <span class="muted">${quem} Costuma levar de 10 a 30 segundos; a tela atualiza sozinha.</span>
+      </div>
+    </div>`;
 }
 
 function ligarAcoesDetalhe(o) {
-  const executar = async (fn, msg) => {
+  const cliente = esc(o.cliente.nome || o.cliente.telefone);
+
+  // Roda a ação com o botão ocupado; erros viram aviso e a tela é redesenhada no fim.
+  // Sem conexão, a tela fica como está (nada se perde) e só os botões voltam.
+  const executar = async (botao, texto, fn, titulo) => {
+    const antes = [...document.querySelectorAll("#app button")].map((b) => [b, b.disabled]);
+    const rotulo = botao.innerHTML;
+    ocupar(botao, texto);
     try {
-      await fn();
-      if (msg) avisar(msg);
+      const r = await fn();
+      await render();
+      return r;
     } catch (e) {
-      avisar(e.message);
+      avisarErro(e, titulo);
+      if (e instanceof ErroConexao) {
+        conexao(false);
+        antes.forEach(([b, d]) => (b.disabled = d));
+        botao.removeAttribute("aria-busy");
+        botao.innerHTML = rotulo;
+      } else await render();
     }
-    render();
   };
 
+  // O envio pode falhar mesmo com a aprovação feita: o servidor responde com status falha_envio.
+  const falhaEnvio = (r) => r?.envios?.at(-1)?.erro || "Erro desconhecido.";
+
   app.querySelectorAll("[data-aprovar]").forEach((b) =>
-    b.addEventListener("click", () => {
-      b.disabled = true;
-      executar(() => api(`/api/orcamentos/${o.id}/aprovar`, { method: "POST" }), "Aprovado! PDF enviado para o WhatsApp.");
+    b.addEventListener("click", async () => {
+      const ok = await confirmar({
+        titulo: "Aprovar e enviar?",
+        texto: `<p><strong>${esc(o.codigo)} · ${cliente}</strong><br>Total de <strong>${brl(o.calculo.total)}</strong></p>
+                <p class="muted">O PDF vai para a IA do WhatsApp enviar à cliente. Depois disso o envio não pode ser desfeito.</p>`,
+        ok: "Aprovar e enviar",
+      });
+      if (!ok) return;
+      const r = await executar(b, "Aprovando…", () => api(`/api/orcamentos/${o.id}/aprovar`, { method: "POST" }), "Não foi possível aprovar");
+      if (r?.status === "falha_envio") avisar(falhaEnvio(r), "erro", "Aprovado, mas o envio ao WhatsApp falhou");
+      else if (r) avisar("O PDF foi para a IA do WhatsApp enviar à cliente.", "sucesso", `${o.codigo} aprovado`);
     })
   );
 
-  $("#pedir-mudanca").addEventListener("click", () => {
-    const comentario = $("#mudanca").value.trim();
-    if (!comentario) return $("#mudanca").focus();
-    executar(() => api(`/api/orcamentos/${o.id}/mudanca`, { method: "POST", body: { comentario } }),
-      "Mudança registrada. Recalculando…");
+  app.querySelectorAll("[data-reenviar]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const r = await executar(b, "Enviando…", () => api(`/api/orcamentos/${o.id}/reenviar`, { method: "POST" }), "Não foi possível reenviar");
+      if (r?.status === "falha_envio") avisar(falhaEnvio(r), "erro", "O envio falhou de novo");
+      else if (r) avisar("O PDF foi para a IA do WhatsApp.", "sucesso", "Reenviado");
+    })
+  );
+
+  const campo = $("#mudanca");
+  const erroCampo = $("#mudanca-erro");
+  const marcarErro = (sim) => {
+    erroCampo.hidden = !sim;
+    if (sim) campo.setAttribute("aria-invalid", "true");
+    else campo.removeAttribute("aria-invalid");
+  };
+  campo.addEventListener("input", () => { if (campo.value.trim()) marcarErro(false); });
+  $("#pedir-mudanca").addEventListener("click", async (e) => {
+    const b = e.currentTarget;
+    const comentario = campo.value.trim();
+    if (!comentario) { marcarErro(true); campo.focus(); return; }
+    const ok = await confirmar({
+      titulo: "Recalcular o orçamento?",
+      texto: `<p>A IA vai refazer o cálculo de <strong>${cliente}</strong> com este pedido:</p>
+              <blockquote>${esc(comentario)}</blockquote>
+              <p class="muted">Depois é só revisar e aprovar de novo.</p>`,
+      ok: "Recalcular",
+    });
+    if (!ok) return;
+    const r = await executar(b, "Recalculando…", () => api(`/api/orcamentos/${o.id}/mudanca`, { method: "POST", body: { comentario } }), "Não foi possível pedir a mudança");
+    if (r) avisar("O novo cálculo aparece aqui em alguns segundos.", "info", "Mudança registrada");
   });
 
-  app.querySelectorAll("[data-reenviar]").forEach((b) =>
-    b.addEventListener("click", () => executar(() => api(`/api/orcamentos/${o.id}/reenviar`, { method: "POST" })))
+  app.querySelectorAll("[data-recalcular]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const ok = await confirmar({
+        titulo: "Tentar com a IA de novo?",
+        texto: `<p>O cálculo atual, feito pelas regras, será substituído pelo da IA${meta.ia ? ` (${esc(meta.ia)})` : ""}.</p>`,
+        ok: "Tentar de novo",
+      });
+      if (!ok) return;
+      const r = await executar(b, "Pedindo…", () => api(`/api/orcamentos/${o.id}/recalcular`, { method: "POST" }), "Não foi possível recalcular");
+      if (r) avisar("O novo cálculo aparece aqui em alguns segundos.", "info", "Cálculo pedido");
+    })
   );
 
   $("#editar")?.addEventListener("click", () => {
-    edicao = { itens: structuredClone(o.calculo.itens), descontoPercentual: o.calculo.descontoPercentual };
+    edicao = {
+      itens: structuredClone(o.calculo.itens),
+      descontoPercentual: o.calculo.descontoPercentual,
+      original: JSON.stringify([o.calculo.itens, o.calculo.descontoPercentual]),
+    };
     render();
   });
-  $("#cancelar-edicao")?.addEventListener("click", () => { edicao = null; render(); });
+  $("#cancelar-edicao")?.addEventListener("click", async () => {
+    if (edicaoAlterada() && !(await confirmar({
+      titulo: "Descartar as alterações?",
+      texto: "<p>As mudanças nos itens ainda não foram salvas.</p>",
+      ok: "Descartar",
+      cancelar: "Continuar editando",
+    }))) return;
+    edicao = null;
+    render();
+  });
 
   if (edicao) {
     app.querySelectorAll("[data-campo]").forEach((inp) =>
       inp.addEventListener("change", () => {
-        edicao.itens[inp.dataset.i][inp.dataset.campo] = Number(inp.value) || 0;
+        let v = Number(inp.value) || 0;
+        if (v < 0) { v = 0; avisar("Valores negativos viram zero.", "info"); }
+        edicao.itens[inp.dataset.i][inp.dataset.campo] = v;
         render();
       })
     );
@@ -437,14 +635,45 @@ function ligarAcoesDetalhe(o) {
       await render();
       $("#add-item .dropdown-botao")?.focus({ preventScroll: true }); // mantém o foco após redesenhar
     });
-    $("#desconto").addEventListener("change", (e) => { edicao.descontoPercentual = Number(e.target.value) || 0; render(); });
-    $("#salvar-edicao").addEventListener("click", () => {
-      const corpo = { ...edicao };
-      edicao = null;
-      executar(() => api(`/api/orcamentos/${o.id}/calculo`, { method: "PUT", body: corpo }), "Orçamento salvo. Revise e aprove para enviar.");
+    $("#desconto").addEventListener("change", (e) => {
+      const v = Number(e.target.value) || 0;
+      const ajustado = Math.min(Math.max(v, 0), meta.descontoMaximo);
+      if (ajustado !== v) avisar(`O desconto fica entre 0 e ${meta.descontoMaximo}%.`, "info", "Desconto ajustado");
+      edicao.descontoPercentual = ajustado;
+      render();
+    });
+    $("#salvar-edicao").addEventListener("click", async (e) => {
+      if (!edicao.itens.some((i) => i.quantidade > 0)) {
+        avisar("Deixe pelo menos um serviço com quantidade maior que zero.", "erro", "Orçamento vazio");
+        return;
+      }
+      const { itens, descontoPercentual } = edicao;
+      const r = await executar(e.currentTarget, "Salvando…", async () => {
+        const res = await api(`/api/orcamentos/${o.id}/calculo`, { method: "PUT", body: { itens, descontoPercentual } });
+        edicao = null; // só sai da edição se salvou
+        return res;
+      }, "Não foi possível salvar");
+      if (r) avisar("Revise e aprove para enviar.", "sucesso", "Orçamento salvo");
     });
   }
 }
+
+const edicaoAlterada = () => Boolean(edicao) && JSON.stringify([edicao.itens, edicao.descontoPercentual]) !== edicao.original;
+
+// Sair da tela com edição pendente pede confirmação (links internos e fechar a aba).
+document.addEventListener("click", async (e) => {
+  const a = e.target.closest('a[href^="#/"]');
+  if (!a || !edicaoAlterada()) return;
+  e.preventDefault();
+  const ok = await confirmar({
+    titulo: "Sair sem salvar?",
+    texto: "<p>As alterações nos itens deste orçamento serão perdidas.</p>",
+    ok: "Sair sem salvar",
+    cancelar: "Continuar editando",
+  });
+  if (ok) { edicao = null; location.hash = a.getAttribute("href"); }
+});
+window.addEventListener("beforeunload", (e) => { if (edicaoAlterada()) e.preventDefault(); });
 
 // ---------- Saída WhatsApp ----------
 
@@ -469,9 +698,10 @@ async function telaSaida() {
 // ---------- Roteamento e atualização ----------
 
 let atualOrc = null;
-async function render() {
+async function render({ carregando = false } = {}) {
   const [, tela, param] = (location.hash || "#/fila").split("/");
   document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("ativo", a.dataset.nav === (tela === "orcamento" ? "fila" : tela || "fila")));
+  if (carregando) app.innerHTML = esqueleto(tela);
   try {
     if (tela === "orcamento") atualOrc = await telaOrcamento(param);
     else if (tela === "saida") { atualOrc = null; await telaSaida(); }
@@ -480,27 +710,73 @@ async function render() {
       if (param) filtroAtual = param;
       await telaFila();
     }
+    conexao(true);
   } catch (e) {
-    app.innerHTML = `<div class="vazio-grande"><span class="label">Erro</span><p>${esc(e.message)}</p><a class="btn" href="#/fila">Voltar à fila</a></div>`;
+    const semRede = e instanceof ErroConexao;
+    if (semRede) conexao(false);
+    app.innerHTML = `
+      <div class="vazio-grande" role="alert">
+        <span class="label">${semRede ? "Sem conexão" : "Erro"}</span>
+        <p>${esc(e.message)}</p>
+        <div class="acoes-erro">
+          <button class="btn cheio" data-tentar>Tentar de novo</button>
+          ${tela === "orcamento" ? `<a class="btn" href="#/fila">Voltar à fila</a>` : ""}
+        </div>
+      </div>`;
+    $("[data-tentar]").addEventListener("click", () => render({ carregando: true }));
   }
 }
 
-window.addEventListener("hashchange", () => { edicao = null; render(); window.scrollTo(0, 0); });
+window.addEventListener("hashchange", () => { edicao = null; render({ carregando: true }); window.scrollTo(0, 0); });
 
 async function ciclo() {
-  await carregarNotificacoes().catch(() => {});
+  try {
+    await carregarNotificacoes();
+    conexao(true);
+  } catch (e) {
+    if (e instanceof ErroConexao) conexao(false);
+    return;
+  }
+  // A conexão voltou e a tela ficou no erro: tenta de novo sozinha.
+  if (app.querySelector("[data-tentar]")) return render();
   const [, tela] = (location.hash || "#/fila").split("/");
   const digitando = document.activeElement?.matches("input, textarea, select, .dropdown *");
-  if (digitando || edicao) return;
+  const ocupado = $("#dialogo").open || app.querySelector("button[aria-busy]");
+  if (digitando || edicao || ocupado) return;
   if (tela === "fila" || !tela) telaFila().catch(() => {});
-  else if (tela === "orcamento" && atualOrc && ["calculando", "enviando"].includes(atualOrc.status)) render();
+  else if (tela === "orcamento" && atualOrc && ["calculando", "enviando"].includes(atualOrc.status)) {
+    const antes = atualOrc;
+    await render();
+    avisarFimDoCalculo(antes, atualOrc);
+  }
+}
+
+// Avisa quando o cálculo em segundo plano termina com a tela aberta.
+function avisarFimDoCalculo(antes, depois) {
+  if (antes.status !== "calculando" || !depois || depois.id !== antes.id || depois.status === "calculando" || !depois.calculo) return;
+  const c = depois.calculo;
+  if (c.pontosDeAtencao?.some((p) => p.startsWith("IA falhou"))) avisar("Usamos as regras automáticas. Revise os itens antes de aprovar.", "erro", "A IA não conseguiu calcular");
+  else if (c.geradoPor === "ia") avisar("Revise e aprove para enviar.", "sucesso", `Calculado pela IA${c.ia ? ` (${c.ia})` : ""}`);
+  else avisar("Revise e aprove para enviar.", "info", "Calculado pelas regras");
 }
 
 (async function iniciar() {
-  meta = await api("/api/meta");
+  try {
+    meta = await api("/api/meta");
+  } catch (e) {
+    if (e instanceof ErroConexao) conexao(false);
+    app.innerHTML = `
+      <div class="vazio-grande" role="alert">
+        <span class="label">Não foi possível abrir o hub</span>
+        <p>${esc(e.message)}</p>
+        <button class="btn cheio" id="recarregar">Tentar de novo</button>
+      </div>`;
+    $("#recarregar").addEventListener("click", () => location.reload());
+    return;
+  }
   mostrarConta(meta.usuario);
   try { sessionStorage.removeItem("hub_link"); } catch {} // token do link de senha já foi usado
-  await render();
-  await carregarNotificacoes();
+  await render({ carregando: true });
+  carregarNotificacoes().catch(() => {});
   setInterval(ciclo, 6000);
 })();

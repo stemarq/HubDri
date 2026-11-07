@@ -44,8 +44,15 @@
     </div>
     </div>
   </header>
-  <div class="aviso" id="aviso" role="status" hidden></div>
-  <main id="app"></main>
+  <div class="conexao" id="conexao" role="alert" hidden>
+    <span class="spinner" aria-hidden="true"></span>
+    <span>Sem conexão com o servidor. Tentando de novo…</span>
+  </div>
+  <main id="app">
+    <div class="carregando-tela"><span class="spinner grande" aria-hidden="true"></span>Carregando o hub…</div>
+  </main>
+  <div class="avisos" id="avisos"></div>
+  <dialog class="dialogo" id="dialogo" aria-labelledby="dialogo-titulo"></dialog>
   <script src="/app.js" type="module"></script>
 </body>
 </html>
