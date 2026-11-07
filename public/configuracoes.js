@@ -42,7 +42,8 @@ export async function telaConfiguracoes() {
       ${campo("Desconto máximo permitido (%)", "descontoMaximoPercentual", num(h.descontoMaximoPercentual), 'inputmode="decimal"')}
       ${campo("Marcar como atrasado depois de (horas)", "atrasoHoras", num(h.atrasoHoras), 'inputmode="numeric"')}
       ${area("Instruções para a IA que monta o orçamento", "instrucoesCalculo", h.instrucoesCalculo, 5)}
-      <div class="pilha"><span class="label">Catálogo de preços</span>
+      <div class="pilha"><span class="label">Tabela de preços</span>
+        <p class="dica" style="margin:0">Dois preços por serviço: no studio e a domicílio. O orçamento usa o do local do atendimento. Domicílio vazio = usa o do studio e avisa no orçamento.</p>
         <div id="catalogo" class="pilha"></div>
         <div class="botoes" style="margin:0"><button type="button" class="btn pequeno" id="novo-item">+ Adicionar item</button></div>
       </div>
@@ -71,10 +72,10 @@ export async function telaConfiguracoes() {
     <div class="card secao"><span class="label">ADRI indisponível</span><p>${esc(a.erro)}. As configurações da ADRI aparecem aqui quando ela estiver no ar.</p></div>`}`;
 
   // ----- catálogo -----
-  const linhaItem = (it = { codigo: "", descricao: "", unidade: "un", valor: "" }) => {
+  const linhaItem = (it = { codigo: "", descricao: "", unidade: "pessoa", valor: "" }) => {
     const d = document.createElement("div");
     d.className = "item-cat";
-    d.innerHTML = `${entrada(it.codigo, 'data-k="codigo" placeholder="CÓDIGO"')}${entrada(it.descricao, 'data-k="descricao" placeholder="Descrição"')}${entrada(it.unidade, 'data-k="unidade" placeholder="un"')}${entrada(it.valor, 'data-k="valor" inputmode="decimal" placeholder="R$"')}<button type="button" class="link" aria-label="Remover item">Remover</button>`;
+    d.innerHTML = `${entrada(it.codigo, 'data-k="codigo" placeholder="CÓDIGO"')}${entrada(it.descricao, 'data-k="descricao" placeholder="Descrição"')}${entrada(it.unidade, 'data-k="unidade" placeholder="un"')}${entrada(it.valor, 'data-k="valor" inputmode="decimal" placeholder="Studio R$" title="Preço no studio" aria-label="Preço no studio"')}${entrada(it.valorDomicilio ?? "", 'data-k="valorDomicilio" inputmode="decimal" placeholder="Domicílio R$" title="Preço a domicílio" aria-label="Preço a domicílio"')}<button type="button" class="link" aria-label="Remover item">Remover</button>`;
     d.querySelector("button").addEventListener("click", () => d.remove());
     return d;
   };
@@ -86,7 +87,7 @@ export async function telaConfiguracoes() {
     const f = e.target, v = (n) => f.elements[n].value;
     const catalogo = [...f.querySelectorAll(".item-cat")].map((r) => {
       const g = (k) => r.querySelector(`[data-k=${k}]`).value;
-      return { codigo: g("codigo"), descricao: g("descricao"), unidade: g("unidade"), valor: g("valor").replace(",", ".") };
+      return { codigo: g("codigo"), descricao: g("descricao"), unidade: g("unidade"), valor: g("valor").replace(",", "."), valorDomicilio: g("valorDomicilio").trim().replace(",", ".") };
     });
     const m = $("#m-hub");
     try {
