@@ -74,7 +74,6 @@ export async function telaConfiguracoes() {
   const linhaItem = (it = { codigo: "", descricao: "", unidade: "un", valor: "" }) => {
     const d = document.createElement("div");
     d.className = "item-cat";
-    d.style.cssText = "display:grid;grid-template-columns:minmax(70px,1fr) minmax(120px,3fr) 70px 90px auto;gap:6px;align-items:center";
     d.innerHTML = `${entrada(it.codigo, 'data-k="codigo" placeholder="CÓDIGO"')}${entrada(it.descricao, 'data-k="descricao" placeholder="Descrição"')}${entrada(it.unidade, 'data-k="unidade" placeholder="un"')}${entrada(it.valor, 'data-k="valor" inputmode="decimal" placeholder="R$"')}<button type="button" class="link" aria-label="Remover item">Remover</button>`;
     d.querySelector("button").addEventListener("click", () => d.remove());
     return d;
@@ -105,7 +104,6 @@ export async function telaConfiguracoes() {
   a.services.forEach((s) => {
     const d = document.createElement("div");
     d.className = "item-srv"; d.dataset.code = s.code; d.dataset.name = s.name;
-    d.style.cssText = "display:grid;grid-template-columns:1fr 110px auto;gap:8px;align-items:center";
     d.innerHTML = `<span>${esc(s.name)}</span>${entrada(s.durationMin, 'data-k="durationMin" inputmode="numeric" aria-label="Duração em minutos"')}<label class="muted" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-k="active" ${s.active ? "checked" : ""}> ativo</label>`;
     $("#servicos").append(d);
   });

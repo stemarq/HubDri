@@ -212,7 +212,31 @@ h2 .label { font-size: 11px; }
 
 .ok { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--pill); background: var(--areia); color: var(--cacau); font-size: 13px; font-weight: 500; }
 .dica { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
-.pilha { display: grid; gap: 8px; }
+.pilha { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
+.pilha > * { min-width: 0; }
+input[type="checkbox"], input[type="radio"] { width: auto; padding: 0; flex: none; }
+
+/* Configurações: no celular, a descrição ocupa a linha de cima e os campos curtos ficam embaixo. */
+.item-cat {
+  display: grid; gap: 6px; align-items: center;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, 1fr) auto;
+  grid-template-areas: "desc desc desc desc" "cod un val rem";
+  padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.item-cat > :nth-child(1) { grid-area: cod; }
+.item-cat > :nth-child(2) { grid-area: desc; }
+.item-cat > :nth-child(3) { grid-area: un; }
+.item-cat > :nth-child(4) { grid-area: val; }
+.item-cat > :nth-child(5) { grid-area: rem; }
+.item-srv { display: grid; gap: 8px; align-items: center; grid-template-columns: minmax(0, 1fr) 84px auto; }
+@media (min-width: 640px) {
+  .item-cat {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) 70px 90px auto;
+    grid-template-areas: "cod desc un val rem";
+    padding-bottom: 0; border-bottom: 0;
+  }
+  .item-srv { grid-template-columns: minmax(0, 1fr) 110px auto; }
+}
 
 .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 0; }
 .kv dd { margin: 3px 0 0; overflow-wrap: anywhere; }
