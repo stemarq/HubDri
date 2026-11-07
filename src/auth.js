@@ -2,11 +2,11 @@
 //
 // O navegador nunca fala com o Supabase: o servidor faz o login e guarda a sessão em
 // cookies httpOnly. Assim imagens e PDF (abertos por link) também ficam protegidos.
-// Ter conta não basta: o perfil precisa estar ativo (tabela `perfis`).
+// Toda conta do Auth entra; a dona pode bloquear alguém (perfis.ativo = false).
 import { createClient } from "@supabase/supabase-js";
 import { env } from "./config.js";
 import * as store from "./store.js";
-import { paginaEntrar, paginaEsqueciSenha, paginaDefinirSenha, paginaAguardando } from "./paginas-acesso.js";
+import { paginaEntrar, paginaEsqueciSenha, paginaDefinirSenha, paginaBloqueado } from "./paginas-acesso.js";
 
 export const loginAtivo = store.modo === "supabase";
 
@@ -82,7 +82,7 @@ function renovar(refreshToken) {
   return renovacoes.get(refreshToken);
 }
 
-// Perfis ativos ficam 30 s em cache; inativos são conferidos a cada vez (para liberar na hora).
+// Perfis ativos ficam 30 s em cache; bloqueados são conferidos a cada vez (para desbloquear na hora).
 const perfis = new Map();
 
 async function perfilDe(uid) {
@@ -106,13 +106,13 @@ async function sessaoAtual(req, res) {
     }
   }
   if (!uid) return null;
-  // Conta sem perfil (ex.: criada antes da migration) é tratada como ainda não liberada.
+  // Conta sem perfil (ex.: criada antes da migration) fica sem acesso até ter um perfil.
   return (await perfilDe(uid)) ?? { id: uid, email: "", ativo: false };
 }
 
 const querJson = (req) => req.path.startsWith("/api/") || req.path.startsWith("/uploads/");
 
-// Middleware: tudo depois dele exige login com perfil ativo.
+// Middleware: tudo depois dele exige login (e conta não bloqueada).
 export async function exigirLogin(req, res, next) {
   try {
     const perfil = await sessaoAtual(req, res);
@@ -122,8 +122,8 @@ export async function exigirLogin(req, res, next) {
       return res.redirect("/login");
     }
     if (!perfil.ativo) {
-      if (querJson(req)) return res.status(403).json({ erro: "Seu acesso ainda não foi liberado." });
-      return res.status(403).send(paginaAguardando(perfil));
+      if (querJson(req)) return res.status(403).json({ erro: "Seu acesso ao hub está bloqueado." });
+      return res.status(403).send(paginaBloqueado(perfil));
     }
     req.usuario = { id: perfil.id, nome: perfil.nome || perfil.email, email: perfil.email, papel: perfil.papel };
     next();

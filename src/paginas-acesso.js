@@ -1,4 +1,4 @@
-// Telas de acesso do hub: entrar, esqueci a senha, definir senha e aguardando liberação.
+// Telas de acesso do hub: entrar, esqueci a senha, definir senha e acesso bloqueado.
 import { config } from "./config.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -104,13 +104,13 @@ export function paginaDefinirSenha({ erro } = {}) {
   })();`);
 }
 
-export function paginaAguardando(perfil) {
-  return layout("Aguardando liberação", `
-  <h1>Quase lá</h1>
+export function paginaBloqueado(perfil) {
+  return layout("Acesso bloqueado", `
+  <h1>Sem acesso</h1>
   <section>
-    <p class="label">Conta criada</p>
-    <h2>Seu acesso ainda não foi liberado.</h2>
-    <p>${perfil?.email ? `Você entrou como <strong>${esc(perfil.email)}</strong>. ` : ""}Assim que a responsável pelo hub liberar sua conta, é só recarregar esta página.</p>
+    <p class="label">Conta bloqueada</p>
+    <h2>Seu acesso ao hub está bloqueado.</h2>
+    <p>${perfil?.email ? `Você entrou como <strong>${esc(perfil.email)}</strong>. ` : ""}Fale com a responsável pelo hub para liberar de novo.</p>
     <form method="post" action="/sair" class="acoes"><button class="btn">Sair</button></form>
   </section>`);
 }
