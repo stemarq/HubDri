@@ -30,7 +30,11 @@ export type BuildResult =
   | { kind: 'created'; quoteId: string; status: string }
   | { kind: 'conflict'; alternatives: Alternative[]; conflicts: { title: string; startEpoch: number; endEpoch: number }[] };
 
-const destinationOf = (s: Slots) => (s.addressFull && s.address ? s.address : s.neighborhood ?? s.address ?? '');
+// Endereço completo + bairro informado (ajuda o geocoding e o provedor simulado a localizar o destino).
+const destinationOf = (s: Slots) => {
+  const full = s.addressFull && s.address ? s.address : s.neighborhood ?? s.address ?? '';
+  return s.neighborhood && !full.toLowerCase().includes(s.neighborhood.toLowerCase()) ? `${full}, ${s.neighborhood}, São Paulo` : full;
+};
 const hm = (ms: number) => fmtTime(epochToLocal(ms).minutes);
 
 async function planFor(ctx: Ctx, s: Slots, extra: { shiftEarlierMin?: number; date?: string } = {}): Promise<Plan> {

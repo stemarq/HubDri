@@ -80,7 +80,7 @@ export function parseDate(text: string, now: Date): DateMention | undefined {
     if (mm) {
       const strictlyAfter = !!(mm[1] || mm[2]);
       let delta = (wd - weekdayOf(today) + 7) % 7;
-      if (delta === 0 && strictlyAfter) delta = 7;
+      if (delta === 0 && (strictlyAfter || !/\bhoje\b/.test(t))) delta = 7; // "sábado" dito num sábado = o próximo, salvo "hoje"
       return { date: addDays(today, delta), needsConfirmation: true, source: mm[0] };
     }
   }
