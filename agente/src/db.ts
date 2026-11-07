@@ -63,8 +63,8 @@ export function openDb(path: string): DB {
 /** Serviços e durações padrão (editáveis em PUT /api/settings/pricing). NÃO inclui preços. */
 function seedServices(db: DB) {
   const rows: [string, string, number][] = [
-    ['MAKEUP', 'Maquiagem', 60], ['HAIR', 'Penteado', 60],
-    ['MAKEUP_HAIR', 'Maquiagem e penteado', 120], ['BRIDE_PACKAGE', 'Pacote de noiva', 180],
+    ['MAKEUP', 'Maquiagem', 90], ['HAIR', 'Penteado', 90],
+    ['MAKEUP_HAIR', 'Maquiagem e penteado', 180], ['BRIDE_PACKAGE', 'Pacote de noiva', 180],
   ];
   const st = db.prepare('INSERT OR IGNORE INTO services (code,name,duration_min,active) VALUES (?,?,?,1)');
   rows.forEach((r) => st.run(...r));
