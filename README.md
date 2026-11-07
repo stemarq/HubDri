@@ -89,8 +89,30 @@ Com `ANTHROPIC_API_KEY`, o Claude (`claude-opus-5-5`) lê o briefing, os dados d
 
 Mobile-first, tema claro, elementos arredondados e sem animações. Paleta nude/rosé (`#EAD7C6` `#DDBBA8` `#F7F3EF` `#A98C7A` `#C87D76` `#B66A5C` `#7B4B4F` `#3A2A23`), definida em `public/tokens.css` e reaproveitada no PDF. Tipografia inspirada em patternbreak.ing: grotesca + IBM Plex Mono nos rótulos. O site usa Neue Montreal (fonte comercial); o hub usa Inter Tight no lugar. Se tiver a licença, coloque `NeueMontreal-Regular/Medium/Bold.woff2` em `public/fonts/` e ela passa a ser usada automaticamente.
 
+## Banco de dados (Supabase)
+
+O esquema fica em `supabase/migrations/`. A primeira migration cria:
+
+- `orcamentos`: cliente, evento, briefing e cálculo em `jsonb`. Também tem `total`, gerado a partir do cálculo, a aprovação única e a resposta da cliente.
+- `orcamento_imagens`, `orcamento_mensagens`, `orcamento_historico`, `orcamento_revisoes` e `orcamento_envios`.
+- `notificacoes` e `saida_whatsapp`.
+- O bucket privado `imagens-orcamento` no Storage, para as fotos do chat.
+
+O código `ORC-0001` vem de uma sequence e o token público é gerado no banco. Um índice único impede dois orçamentos abertos para a mesma conversa. O RLS está ligado e não tem políticas, então só o servidor, com a chave `service_role`, acessa os dados.
+
+Para aplicar:
+
+```bash
+npx supabase login
+npx supabase init            # só na primeira vez (cria supabase/config.toml)
+npx supabase link --project-ref <id-do-projeto>
+npx supabase db push
+```
+
+Outra opção é colar o conteúdo do arquivo no SQL Editor do painel. O hub ainda grava em `data/db.json`; a troca do `src/store.js` pelo Supabase é o próximo passo.
+
 ## Limitações do MVP
 
-- Armazenamento em `data/db.json` (um processo só). Para produção, trocar por Postgres/SQLite.
+- Armazenamento em `data/db.json` (um processo só). O esquema do Supabase já existe (ver acima), mas o hub ainda não está ligado a ele.
 - Login do hub é só uma senha opcional (`HUB_PASSWORD`, HTTP Basic). Feito para uma usuária só: não há perfis nem registro de quem aprovou.
 - Notificações por polling (6 s), sem push/e-mail.
