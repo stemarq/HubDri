@@ -1,0 +1,5 @@
+# Não sobe para o Railway: segredos, banco/arquivos locais e dependências (o Railway instala).
+.env
+data
+node_modules
+test
