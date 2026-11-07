@@ -1,5 +1,6 @@
 // Conversas do WhatsApp/Telegram dentro do hub: ponte para a API do agente ADRI (pasta agente/).
-// A Adriana vê o chat inteiro, assume a conversa (a ADRI para de responder), escreve para a cliente e devolve à ADRI.
+// A Adriana vê o nome da pessoa e TODO o histórico, assume a conversa (a ADRI para de responder), escreve, devolve,
+// corrige o nome, anota observações e exporta a conversa.
 import * as store from "./store.js";
 
 const url = () => (process.env.AGENTE_URL || "http://localhost:3001").replace(/\/$/, "");
@@ -12,11 +13,10 @@ class ErroAgente extends Error {
   }
 }
 
-async function agente(caminho, { metodo = "GET", corpo, autor } = {}) {
+async function chamar(caminho, { metodo = "GET", corpo, autor } = {}) {
   if (!token()) throw new ErroAgente("AGENTE_TOKEN não configurado no .env do hub", 503);
-  let r;
   try {
-    r = await fetch(url() + caminho, {
+    return await fetch(url() + caminho, {
       method: metodo,
       headers: { "content-type": "application/json", authorization: `Bearer ${token()}`, ...(autor ? { "x-actor": autor } : {}) },
       body: corpo ? JSON.stringify(corpo) : undefined,
@@ -25,6 +25,10 @@ async function agente(caminho, { metodo = "GET", corpo, autor } = {}) {
   } catch {
     throw new ErroAgente("O agente ADRI está fora do ar (confira AGENTE_URL e se ele está rodando)");
   }
+}
+
+async function agente(caminho, opcoes) {
+  const r = await chamar(caminho, opcoes);
   const dados = await r.json().catch(() => ({}));
   if (!r.ok) throw new ErroAgente(dados.message || dados.error || `Agente respondeu HTTP ${r.status}`, r.status === 404 ? 404 : 502);
   return dados;
@@ -34,17 +38,29 @@ const orcamentoDa = (conversationId) => {
   const o = store.orcamentos().findLast((x) => x.origem?.conversationId === conversationId);
   return o ? { id: o.id, codigo: o.codigo, status: o.status } : null;
 };
-const quem = (de) => (de === "IN" ? "cliente" : "ia");
+const quem = (m) => (m.direction === "IN" ? "cliente" : m.author === "ADRIANA" ? "adriana" : "ia");
+const pessoa = (c) => ({
+  id: c.customer.id,
+  nome: c.customer.name,
+  usuario: c.customer.handle,
+  telefone: c.customer.phone,
+  identificador: c.customer.waId,
+  observacoes: c.customer.notes,
+  desde: c.customer.since,
+  apagado: c.customer.erased,
+});
 
 export function rotasConversas(app, rota) {
   app.get("/api/conversas", rota(async (req, res) => {
-    const { conversations } = await agente("/api/conversations");
+    const q = req.query.q ? `?q=${encodeURIComponent(String(req.query.q))}` : "";
+    const { conversations } = await agente("/api/conversations" + q);
     const itens = conversations.map((c) => ({
       id: c.id,
-      cliente: c.customer.name || c.customer.waId,
+      pessoa: pessoa(c),
       canal: c.channel,
       modo: c.mode,
-      ultima: c.lastMessage ? { texto: c.lastMessage.body, de: quem(c.lastMessage.direction), em: c.lastMessage.at } : null,
+      mensagens: c.messageCount,
+      ultima: c.lastMessage ? { texto: c.lastMessage.body, de: quem(c.lastMessage), tipo: c.lastMessage.type, em: c.lastMessage.at } : null,
       atualizadoEm: c.updatedAt,
       orcamento: orcamentoDa(c.id),
     }));
@@ -55,17 +71,34 @@ export function rotasConversas(app, rota) {
     const c = await agente(`/api/conversations/${encodeURIComponent(req.params.id)}`);
     res.json({
       id: c.id,
-      cliente: c.customer.name || c.customer.waId,
+      pessoa: pessoa(c),
       canal: c.channel,
       modo: c.mode,
+      mensagens: c.messageCount,
       aguardando: c.awaiting,
       coletado: c.collected,
       orcamento: orcamentoDa(c.id),
-      mensagens: c.messages.map((m) => ({
-        id: m.id, tipo: m.type, texto: m.body, em: m.at, status: m.status, erro: m.error,
-        de: m.direction === "IN" ? "cliente" : m.author === "ADRIANA" ? "adriana" : "ia",
-      })),
+      historico: c.messages.map((m) => ({ id: m.id, tipo: m.type, texto: m.body, em: m.at, status: m.status, erro: m.error, de: quem(m) })),
     });
+  }));
+
+  // Baixar a conversa inteira (txt ou json).
+  app.get("/api/conversas/:id/exportar", rota(async (req, res) => {
+    const formato = req.query.formato === "json" ? "json" : "txt";
+    const r = await chamar(`/api/conversations/${encodeURIComponent(req.params.id)}/export?format=${formato}`);
+    if (!r.ok) throw new ErroAgente("Conversa não encontrada", r.status === 404 ? 404 : 502);
+    res.set("Content-Type", r.headers.get("content-type") || "text/plain").set("Content-Disposition", r.headers.get("content-disposition") || "attachment");
+    res.send(Buffer.from(await r.arrayBuffer()));
+  }));
+
+  // Corrigir o nome e anotar observações sobre a pessoa.
+  app.patch("/api/conversas/:id/pessoa", rota(async (req, res) => {
+    const c = await agente(`/api/conversations/${encodeURIComponent(req.params.id)}`);
+    const corpo = {};
+    if (req.body.nome !== undefined) corpo.name = String(req.body.nome).trim().slice(0, 80) || null;
+    if (req.body.observacoes !== undefined) corpo.notes = String(req.body.observacoes).trim().slice(0, 2000) || null;
+    await agente(`/api/customers/${encodeURIComponent(c.customer.id)}`, { metodo: "PATCH", corpo });
+    res.json({ ok: true });
   }));
 
   const acao = (caminho) => rota(async (req, res) => {

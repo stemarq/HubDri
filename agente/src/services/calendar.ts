@@ -25,6 +25,13 @@ export class SimulatedCalendarAdapter implements CalendarAdapter {
   addBusy(title: string, startEpoch: number, endEpoch: number) { return this.createEvent({ title, startEpoch, endEpoch }); }
 }
 
+/** Sem Google Agenda conectado: nunca inventa disponibilidade. A consulta falha (CALENDAR_UNVERIFIED) e a Adriana confirma na mão. */
+export class UnconfiguredCalendarAdapter implements CalendarAdapter {
+  name = 'google-calendar (não conectado)'; simulated = false;
+  async listBusy(): Promise<Busy[]> { throw new Error('Google Agenda não conectado'); }
+  async createEvent(): Promise<{ id: string }> { throw new Error('Google Agenda não conectado'); }
+}
+
 export class GoogleCalendarAdapter implements CalendarAdapter {
   name = 'google-calendar'; simulated = false;
   private token?: { value: string; exp: number };

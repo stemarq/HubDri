@@ -1,6 +1,7 @@
 // Interface do hub: fila de prioridade, detalhe do orçamento, notificações.
 import { telaConversas } from "/conversas.js";
 import { telaConfiguracoes } from "/configuracoes.js";
+import { telaPreco } from "/precificacao.js";
 const $ = (s, el = document) => el.querySelector(s);
 const app = $("#app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -328,7 +329,7 @@ async function telaOrcamento(id) {
   app.innerHTML = `
     <a href="#/fila" class="voltar">← Fila</a>
     <div class="cab-orc">
-      <span class="label">${o.codigo} · recebido ${dataHora(o.criadoEm)} · ${haQuanto(o.criadoEm)}</span>
+      <span class="label">${o.codigo} · recebido ${dataHora(o.criadoEm)} · ${haQuanto(o.criadoEm)}${o.origem?.conversationId ? ` · <a href="#/conversas/${esc(o.origem.conversationId)}">ver conversa completa</a>` : ""}</span>
       <h1>${esc(o.cliente.nome || o.cliente.telefone)}</h1>
       <div class="linha"><span class="chip ${o.status}">${meta.status[o.status]}</span>${ev.tipo ? `<span class="chip">${esc(ev.tipo)}</span>` : ""}</div>
     </div>
@@ -708,6 +709,7 @@ async function render({ carregando = false } = {}) {
     if (tela === "orcamento") atualOrc = await telaOrcamento(param);
     else if (tela === "saida") { atualOrc = null; await telaSaida(); }
     else if (tela === "conversas") { atualOrc = null; await telaConversas(param); }
+    else if (tela === "preco") { atualOrc = null; telaPreco(); }
     else if (tela === "configuracoes") { atualOrc = null; await telaConfiguracoes(); }
     else {
       atualOrc = null;

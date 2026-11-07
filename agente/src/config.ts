@@ -3,7 +3,9 @@ export interface Config {
   adminToken?: string;
   dbPath: string;
   dataDir: string;
-  routeProvider: 'google' | 'simulated';
+  routeProvider: 'google' | 'osm' | 'simulated';
+  /** SIMULAR=1: só para testes/desenvolvimento (agenda, rotas e canal de teste simulados). Em produção fica desligado. */
+  simulate: boolean;
   baseAddress?: string;
   whatsapp: { phoneNumberId?: string; accessToken?: string; appSecret?: string; verifyToken?: string; apiVersion: string };
   google: { mapsApiKey?: string; calendarId?: string; clientId?: string; clientSecret?: string; refreshToken?: string };
@@ -24,7 +26,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     adminToken: env.ADMIN_API_TOKEN || undefined,
     dbPath: env.DB_PATH ?? 'data/adri.db',
     dataDir: env.DATA_DIR ?? 'data',
-    routeProvider: mapsApiKey && env.ROUTE_PROVIDER !== 'simulated' ? 'google' : 'simulated',
+    simulate: env.SIMULAR === '1',
+    routeProvider: env.SIMULAR === '1' && env.ROUTE_PROVIDER === 'simulated' ? 'simulated' : mapsApiKey ? 'google' : 'osm',
     baseAddress: env.BASE_ADDRESS || undefined,
     whatsapp: {
       phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID || undefined,

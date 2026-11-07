@@ -17,11 +17,19 @@ const num = (n) => (n ?? "") + "";
 
 export async function telaConfiguracoes() {
   const app = $("#app");
-  const c = await api("/api/configuracoes");
+  const [c, integ] = await Promise.all([api("/api/configuracoes"), api("/api/integracoes").catch((e) => ({ itens: [{ nome: "Integrações", status: "erro", detalhe: e.message }] }))]);
   const h = c.hub, a = c.agente;
+  const COR = { ok: "#2e7d4f", pendente: "#b3261e", erro: "#b3261e", simulado: "#9a6b00" };
+  const ROT = { ok: "Conectado", pendente: "Falta configurar", erro: "Com erro", simulado: "SIMULADO" };
 
   app.innerHTML = `
     <div class="titulo"><span class="label">Tudo que a Adriana pode mudar quando quiser</span><h1>Configurações</h1></div>
+
+    <section class="card secao pilha" id="integracoes">
+      <h2 style="margin:0;font-size:18px">Integrações</h2>
+      <p class="dica">O que está realmente conectado agora. Nada aqui é simulado em produção: o que falta aparece em vermelho.</p>
+      <ul style="list-style:none;margin:0;padding:0;display:grid;gap:10px">${integ.itens.map((i) => `<li style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:baseline"><span class="chip" style="color:${COR[i.status]};border-color:${COR[i.status]}">${ROT[i.status]}</span><span><strong>${esc(i.nome)}</strong><br><span class="muted">${esc(i.detalhe)}</span></span></li>`).join("")}</ul>
+    </section>
 
     <form class="card secao pilha" id="f-hub">
       <h2 style="margin:0;font-size:18px">Orçamento e preços</h2>

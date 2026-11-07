@@ -1,7 +1,8 @@
 import { join } from 'node:path';
 import { Config, googleCalendarConfigured } from './config.js';
 import { DB, openDb } from './db.js';
-import { CalendarAdapter, CalendarService, GoogleCalendarAdapter, SimulatedCalendarAdapter } from './services/calendar.js';
+import { CalendarAdapter, CalendarService, GoogleCalendarAdapter, SimulatedCalendarAdapter, UnconfiguredCalendarAdapter } from './services/calendar.js';
+import { OsmRouteProvider } from './services/osm.js';
 import { GoogleRoutesProvider, RouteProvider, SimulatedRouteProvider, TransportationEstimator } from './services/transport.js';
 import { ChromePdfRenderer, PdfRenderer } from './services/pdf.js';
 import { OutboundService } from './services/outbound.js';
@@ -30,8 +31,8 @@ export function buildContext(config: Config, overrides: Partial<{ db: DB; now: (
   const now = overrides.now ?? (() => new Date());
   const adapter = overrides.calendarAdapter ?? (googleCalendarConfigured(config)
     ? new GoogleCalendarAdapter({ calendarId: config.google.calendarId!, clientId: config.google.clientId!, clientSecret: config.google.clientSecret!, refreshToken: config.google.refreshToken! })
-    : new SimulatedCalendarAdapter(db));
-  const provider = overrides.routeProvider ?? (config.routeProvider === 'google' ? new GoogleRoutesProvider(config.google.mapsApiKey!) : new SimulatedRouteProvider());
+    : config.simulate ? new SimulatedCalendarAdapter(db) : new UnconfiguredCalendarAdapter());
+  const provider = overrides.routeProvider ?? (config.routeProvider === 'google' ? new GoogleRoutesProvider(config.google.mapsApiKey!, overrides.fetchFn) : config.routeProvider === 'simulated' ? new SimulatedRouteProvider() : new OsmRouteProvider(db, overrides.fetchFn));
   const channels: Record<ChannelName, ChannelAdapter> = {
     SIMULATOR: new SimulatorAdapter(), TELEGRAM: new TelegramAdapter(config, overrides.fetchFn), WHATSAPP: new WhatsAppCloudAdapter(db, config, overrides.fetchFn),
   };

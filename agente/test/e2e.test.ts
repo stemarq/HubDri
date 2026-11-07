@@ -397,7 +397,7 @@ describe('canal Telegram (simulação)', () => {
     const q = one(ctx.db, 'SELECT id FROM quotes')!;
     Q.approve(ctx, q.id as string, 'adriana');
     const s = await Q.sendQuote(ctx, q.id as string, 'adriana');
-    expect(s.delivery).toMatchObject({ channel: 'TELEGRAM', simulated: true });
+    expect(s.delivery).toMatchObject({ channel: 'TELEGRAM', simulated: false });
     expect(calls.at(-1)!.method).toBe('sendDocument');
     expect(one(ctx.db, 'SELECT channel FROM conversations')!.channel).toBe('TELEGRAM');
   });

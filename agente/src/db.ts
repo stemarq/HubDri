@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS business_settings (key TEXT PRIMARY KEY, value TEXT N
 CREATE TABLE IF NOT EXISTS customer_memory (customer_id TEXT PRIMARY KEY REFERENCES customers(id), data TEXT NOT NULL, updated_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_failures (id TEXT PRIMARY KEY, conversation_id TEXT, category TEXT NOT NULL, message TEXT, detail TEXT, status TEXT NOT NULL, regression_ref TEXT, note TEXT, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS message_ratings (id TEXT PRIMARY KEY, message_id TEXT NOT NULL, score INTEGER NOT NULL, comment TEXT, actor TEXT, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS geocode_cache (q TEXT PRIMARY KEY, lat REAL, lon REAL, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS calendar_events (id TEXT PRIMARY KEY, title TEXT NOT NULL, start_ts INTEGER NOT NULL, end_ts INTEGER NOT NULL, created_at INTEGER NOT NULL);
 `;
 
@@ -54,6 +55,7 @@ export function openDb(path: string): DB {
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
   for (const col of ['hub_id TEXT', 'hub_code TEXT', 'hub_status TEXT']) { try { db.exec(`ALTER TABLE quotes ADD COLUMN ${col}`); } catch { /* já existe */ } }
+  for (const col of ['handle TEXT', 'notes TEXT']) { try { db.exec(`ALTER TABLE customers ADD COLUMN ${col}`); } catch { /* já existe */ } }
   seedServices(db);
   return db;
 }

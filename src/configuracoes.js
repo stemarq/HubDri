@@ -1,7 +1,10 @@
 // Configurações editáveis no app: regras e catálogo do orçamento (hub) + agenda, deslocamento e respostas da ADRI (agente).
 import fs from "node:fs";
 import path from "node:path";
-import { config, arquivoEditado } from "./config.js";
+import { config, arquivoEditado, env } from "./config.js";
+import { iaNome } from "./ia.js";
+import * as store from "./store.js";
+import { loginAtivo } from "./auth.js";
 
 const url = () => (process.env.AGENTE_URL || "http://localhost:3001").replace(/\/$/, "");
 const token = () => process.env.AGENTE_TOKEN || "";
@@ -110,7 +113,24 @@ async function salvarAgente(b) {
   return lerAgente();
 }
 
+// Status real de cada integração (nada é dado como conectado sem checar). Itens do agente + itens do próprio hub.
+async function integracoes() {
+  const hub = [
+    { id: "hub-ia", nome: "IA que monta o orçamento", status: iaNome() ? "ok" : "pendente", detalhe: iaNome() ? `${iaNome()}` : "sem GEMINI_API_KEY nem ANTHROPIC_API_KEY: orçamentos calculados só por regras" },
+    { id: "hub-banco", nome: "Banco de dados do hub", status: store.modo === "supabase" ? "ok" : "pendente", detalhe: store.modo === "supabase" ? "Supabase" : "arquivo local data/db.json (configure o Supabase para produção)" },
+    { id: "hub-login", nome: "Login da equipe", status: loginAtivo ? "ok" : "pendente", detalhe: loginAtivo ? "Supabase Auth" : "sem login (só senha opcional): configure o Supabase" },
+    { id: "hub-retorno", nome: "Retorno do orçamento aprovado para a ADRI", status: env.callbackUrl ? "ok" : "simulado", detalhe: env.callbackUrl ? "WHATSAPP_CALLBACK_URL configurada" : "WHATSAPP_CALLBACK_URL vazia: o PDF só fica na aba Saída WhatsApp e NÃO chega à cliente" },
+  ];
+  try {
+    const a = await agente("/api/integrations?force=1");
+    return { agente: true, simulacao: a.simulacao, itens: [...a.itens, ...hub] };
+  } catch (e) {
+    return { agente: false, itens: [{ id: "agente", nome: "Agente ADRI", status: "erro", detalhe: e.message }, ...hub] };
+  }
+}
+
 export function rotasConfiguracoes(app, rota) {
+  app.get("/api/integracoes", rota(async (req, res) => res.json(await integracoes())));
   app.get("/api/configuracoes", rota(async (req, res) => {
     const c = config();
     res.json({

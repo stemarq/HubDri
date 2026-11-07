@@ -18,6 +18,8 @@ import * as A from './services/analytics.js';
 import { FailureError, listFailures, rateMessage, ratingsSummary, resolveFailure } from './services/failures.js';
 import { eraseCustomerData, getMemory } from './services/memory.js';
 import { handleHubCallback, pushToHub } from './services/hub.js';
+import { integracoes } from './services/integracoes.js';
+import { conversationDetail, exportTranscript, listConversations, updateCustomer } from './services/historico.js';
 import { SETTING_SCHEMAS, SettingKey, PricingSettingsInput, getSetting, readPricingSettings, setSetting, writePricingSettings } from './services/settings.js';
 import { localToEpoch, parseHM, toIso } from './lib/time.js';
 import { logger } from './lib/logger.js';
@@ -34,7 +36,7 @@ export function createApp(ctx: Ctx) {
   app.use(express.json({ limit: '12mb', verify: (req: any, _res, buf) => { req.rawBody = buf; } }));
 
   app.get('/health', (_q, res) => res.json({ ok: true, whatsapp: whatsappConfigured(ctx.config) ? 'official-cloud-api' : 'simulator-only',
-    calendar: ctx.calendar.adapter.name, routes: ctx.config.routeProvider === 'google' ? 'google-routes' : 'simulated-routes' }));
+    calendar: ctx.calendar.adapter.name, routes: ctx.transport.providerName }));
 
   // ---------- WhatsApp Cloud API ----------
   app.get('/webhooks/whatsapp', (req, res) => {
@@ -53,7 +55,7 @@ export function createApp(ctx: Ctx) {
   }));
 
   // ---------- Simulador (página pública; as chamadas exigem o token) ----------
-  app.get('/simulator', (_q, res) => res.sendFile(resolve('public/simulator.html')));
+  app.get('/simulator', (_q, res) => (ctx.config.simulate ? res.sendFile(resolve('public/simulator.html')) : res.status(404).send('Simulador desligado (SIMULAR=1 para testes)')));
 
   // ---------- Callback do hub (token próprio; antes da autenticação admin) ----------
   app.post('/api/hub/callback', wrap(async (req, res) => {
@@ -75,6 +77,7 @@ export function createApp(ctx: Ctx) {
   const ChatBody = z.object({ from: z.string().min(3).max(40), name: z.string().max(80).optional(), text: z.string().max(2000).optional(),
     type: z.enum(['text', 'image', 'audio']).default('text'), imageBase64: z.string().optional(), imageExt: z.string().default('jpg'), messageId: z.string().max(100).optional() });
   app.post('/api/chat/message', wrap(async (req, res) => {
+    if (!ctx.config.simulate) return res.status(404).json({ error: 'SIMULATION_DISABLED', message: 'O canal de teste só existe com SIMULAR=1' });
     const b = ChatBody.parse(req.body);
     const existing = one(ctx.db, 'SELECT c.channel FROM conversations c JOIN customers u ON u.id=c.customer_id WHERE u.wa_id=?', b.from);
     if (existing && existing.channel !== 'SIMULATOR') return res.status(409).json({ error: 'REAL_WHATSAPP_CUSTOMER', message: 'Este número pertence a uma conversa real do WhatsApp' });
@@ -84,22 +87,18 @@ export function createApp(ctx: Ctx) {
   }));
 
   // ---------- Conversas ----------
-  const convSummary = (c: any) => {
-    const last = one(ctx.db, 'SELECT body,direction,created_at FROM messages WHERE conversation_id=? ORDER BY created_at DESC LIMIT 1', c.id);
-    const q = one(ctx.db, 'SELECT id,status,hub_id,hub_code FROM quotes WHERE conversation_id=? ORDER BY created_at DESC LIMIT 1', c.id);
-    return { id: c.id, customer: { id: c.customer_id, name: c.name, waId: c.wa_id }, channel: c.channel, mode: c.mode,
-      lastMessage: last ? { body: last.body, direction: last.direction, at: last.created_at } : null, latestQuote: q ? { id: q.id, status: q.status, hubId: q.hub_id ?? null, hubCode: q.hub_code ?? null } : null, updatedAt: c.updated_at };
-  };
-  app.get('/api/conversations', (_q, res) => res.json({ conversations: all(ctx.db, 'SELECT c.*, u.name, u.wa_id FROM conversations c JOIN customers u ON u.id=c.customer_id ORDER BY c.updated_at DESC').map(convSummary) }));
-  app.get('/api/conversations/:id', (req, res) => {
-    const c = one(ctx.db, 'SELECT c.*, u.name, u.wa_id FROM conversations c JOIN customers u ON u.id=c.customer_id WHERE c.id=?', req.params.id);
-    if (!c) return res.status(404).json({ error: 'NOT_FOUND' });
-    const st = parse<any>(c.state, {});
-    res.json({ ...convSummary(c), collected: st.slots ?? null, awaiting: st.awaiting ?? null,
-      messages: all(ctx.db, 'SELECT id,direction,type,body,author,status,error,created_at FROM messages WHERE conversation_id=? ORDER BY created_at', c.id)
-        .map((m) => ({ id: m.id, direction: m.direction, type: m.type, body: m.body, author: m.author, status: m.status, error: m.error, at: m.created_at })),
-      quotes: all(ctx.db, 'SELECT id FROM quotes WHERE conversation_id=? ORDER BY created_at DESC', c.id).map((r) => r.id) });
+  app.get('/api/conversations', (req, res) => res.json({ conversations: listConversations(ctx, req.query.q ? String(req.query.q) : undefined) }));
+  app.get('/api/conversations/:id', (req, res) => { const d = conversationDetail(ctx, req.params.id); d ? res.json(d) : res.status(404).json({ error: 'NOT_FOUND' }); });
+  app.get('/api/conversations/:id/export', (req, res) => {
+    const out = exportTranscript(ctx, req.params.id, req.query.format === 'json' ? 'json' : 'txt');
+    if (!out) return res.status(404).json({ error: 'NOT_FOUND' });
+    res.type(out.type).set('Content-Disposition', `attachment; filename="${out.filename}"`).send(out.body);
   });
+  app.patch('/api/customers/:id', wrap((req, res) => {
+    const b = z.object({ name: z.string().max(80).nullable().optional(), notes: z.string().max(2000).nullable().optional() }).parse(req.body);
+    if (!updateCustomer(ctx, req.params.id, b)) return res.status(404).json({ error: 'NOT_FOUND' });
+    res.json({ ok: true });
+  }));
   app.post('/api/conversations/:id/handoff', (req, res) => {
     if (!one(ctx.db, 'SELECT id FROM conversations WHERE id=?', req.params.id)) return res.status(404).json({ error: 'NOT_FOUND' });
     handoff(ctx, req.params.id, `HUB:${actorOf(req)}`); res.json({ id: req.params.id, mode: 'HUMAN' });
@@ -174,6 +173,8 @@ export function createApp(ctx: Ctx) {
     if (!p.startsWith(resolve(ctx.pdfDir) + sep) || !existsSync(p)) return res.status(404).json({ error: 'PDF_NOT_AVAILABLE' });
     res.type('application/pdf').sendFile(p);
   });
+
+  app.get('/api/integrations', wrap(async (req, res) => res.json({ simulacao: ctx.config.simulate, itens: await integracoes(ctx, req.query.force === '1') })));
 
   // ---------- Revisão humana: falhas, avaliações e privacidade ----------
   app.get('/api/review/failures', (req, res) => res.json({ failures: listFailures(ctx, req.query.status ? String(req.query.status) : undefined) }));

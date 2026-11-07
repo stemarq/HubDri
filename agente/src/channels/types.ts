@@ -6,6 +6,7 @@ export interface InboundEvent {
   channel: ChannelName;
   userId: string;               // identificador estável da cliente no canal (wa_id, tg:<chat_id>)
   displayName?: string;
+  handle?: string;              // @usuário, quando o canal tem
   messageId?: string;           // id externo (idempotência)
   type: 'text' | 'image' | 'audio' | 'other';
   text?: string;
