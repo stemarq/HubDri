@@ -24,9 +24,12 @@
   --muted: var(--ameixa);
   --border: var(--areia);
   --border-strong: var(--nude);
-  --accent: var(--nude);       /* destaques: total, pendências */
+  --primary: var(--terracota); /* cor principal (burnt rose): botões, total, marca */
+  --primary-hover: var(--ameixa);
+  --primary-fg: #ffffff;
+  --accent: var(--nude);       /* destaques suaves: pendências */
   --accent-fg: var(--cacau);
-  --brand: var(--rose);        /* pontos de cor: etapa atual, contador */
+  --brand: var(--primary);     /* pontos de cor: contador, notificações */
   --danger: var(--terracota);
   --r-sm: 10px;
   --r: 16px;
@@ -59,21 +62,21 @@ img { max-width: 100%; }
   cursor: pointer; text-decoration: none; white-space: nowrap;
 }
 .btn:hover { border-color: var(--fg); }
-.btn.cheio { background: var(--fg); border-color: var(--fg); color: #fff; }
-.btn.cheio:hover { background: var(--ameixa); border-color: var(--ameixa); }
+.btn.cheio { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+.btn.cheio:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
 .btn.destaque { background: var(--rose); border-color: var(--rose); color: var(--cacau); }
 .btn.pequeno { min-height: 36px; padding: 0 14px; font-size: 13px; }
 .btn.bloco { width: 100%; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
-  outline: 2px solid var(--fg); outline-offset: 2px;
+  outline: 2px solid var(--primary); outline-offset: 2px;
 }
 
 input, textarea, select {
   width: 100%; padding: 11px 14px; font-size: 16px; /* 16px evita zoom no iOS */
   border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface);
 }
-input:focus, textarea:focus, select:focus { border-color: var(--fg); outline: none; }
+input:focus, textarea:focus, select:focus { border-color: var(--primary); outline: none; }
 textarea { resize: vertical; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow); }

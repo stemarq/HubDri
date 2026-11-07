@@ -11,13 +11,13 @@
   background: rgba(247, 243, 239, 0.94); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
-.marca { grid-area: marca; font-weight: 700; font-size: 20px; letter-spacing: -0.01em; text-decoration: none; }
+.marca { grid-area: marca; color: var(--primary); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; text-decoration: none; }
 .nav { grid-area: nav; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
 .nav a {
   padding: 7px 14px; border-radius: var(--pill); text-decoration: none; white-space: nowrap;
   font-size: 14px; color: var(--muted); border: 1px solid transparent;
 }
-.nav a.ativo { background: var(--surface); color: var(--fg); border-color: var(--border); box-shadow: var(--shadow); }
+.nav a.ativo { background: var(--surface); color: var(--primary); border-color: var(--border); box-shadow: var(--shadow); }
 
 .notif { grid-area: sino; position: relative; }
 .sino {
@@ -27,7 +27,7 @@
 .badge {
   position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 6px;
   display: grid; place-items: center; border-radius: var(--pill);
-  background: var(--brand); color: var(--cacau);
+  background: var(--brand); color: var(--primary-fg);
   font: 500 11px/1 var(--mono);
 }
 .painel {
@@ -64,7 +64,7 @@ h2 .label { font-size: 11px; }
 .abas { display: flex; gap: 4px; padding: 4px; background: var(--areia); border-radius: var(--pill); overflow-x: auto; scrollbar-width: none; max-width: 100%; }
 .abas::-webkit-scrollbar, .nav::-webkit-scrollbar { display: none; }
 .abas a { padding: 8px 14px; border-radius: var(--pill); text-decoration: none; font-size: 14px; color: var(--muted); white-space: nowrap; }
-.abas a.ativo { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.abas a.ativo { background: var(--surface); color: var(--primary); box-shadow: var(--shadow); }
 .abas .n { font-family: var(--mono); font-size: 12px; margin-left: 4px; }
 
 /* ---------- Fila (cards) ---------- */
@@ -103,16 +103,16 @@ h2 .label { font-size: 11px; }
 .progresso { margin: 0 0 16px; }
 .progresso .barras { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 8px; }
 .progresso .barras span { height: 6px; border-radius: var(--pill); background: var(--border); }
-.progresso .barras .feito { background: var(--cacau); }
-.progresso .barras .atual { background: var(--brand); }
+.progresso .barras .feito { background: var(--primary); }
+.progresso .barras .atual { background: var(--nude); }
 .progresso .nomes { display: none; }
 
 .grade { display: grid; gap: 12px; }
 .coluna { display: grid; gap: 12px; align-content: start; min-width: 0; }
 .secao { padding: 18px; }
 
-.resumo-total { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--accent); color: var(--accent-fg); border-radius: var(--r); padding: 14px 16px; margin-bottom: 14px; }
-.resumo-total .label { color: var(--accent-fg); }
+.resumo-total { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--primary); color: var(--primary-fg); border-radius: var(--r); padding: 14px 16px; margin-bottom: 14px; }
+.resumo-total .label { color: var(--primary-fg); opacity: 0.85; }
 .resumo-total b { font-size: 24px; }
 
 .aprov { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--border); }
@@ -139,8 +139,8 @@ h2 .label { font-size: 11px; }
 .itens .editar input { padding: 8px 10px; }
 .totais { margin-top: 12px; display: grid; gap: 6px; }
 .totais div { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
-.totais .final { margin-top: 6px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--accent); color: var(--accent-fg); font-weight: 700; font-size: 20px; align-items: center; }
-.totais .final .label { color: var(--accent-fg); }
+.totais .final { margin-top: 6px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--primary); color: var(--primary-fg); font-weight: 700; font-size: 20px; align-items: center; }
+.totais .final .label { color: var(--primary-fg); opacity: 0.85; }
 .barra-edicao { display: grid; gap: 10px; margin-top: 14px; }
 .barra-edicao label { display: grid; gap: 4px; }
 .botoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
