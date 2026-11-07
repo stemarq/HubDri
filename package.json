@@ -7,7 +7,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.js",
-    "dev": "node --watch --env-file-if-exists=.env src/server.js"
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "env:novo": "node scripts/env-novo.js"
   },
   "engines": {
     "node": ">=22"

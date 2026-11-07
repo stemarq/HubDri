@@ -13,6 +13,7 @@ export interface Config {
   chromePath?: string;
   hub: { url?: string; webhookToken?: string; callbackToken?: string };
   llm: { anthropicApiKey?: string; model: string };
+  gemini: { apiKey?: string; model: string; reserve: string };
   openaiApiKey?: string;
 }
 
@@ -45,6 +46,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     chromePath: env.CHROME_PATH || undefined,
     hub: { url: (env.HUB_URL || '').replace(/\/$/, '') || undefined, webhookToken: env.HUB_WEBHOOK_TOKEN || undefined, callbackToken: env.HUB_CALLBACK_TOKEN || env.WHATSAPP_CALLBACK_TOKEN || undefined },
     llm: { anthropicApiKey: env.ANTHROPIC_API_KEY || undefined, model: env.LLM_MODEL || 'claude-haiku-5-5' },
+    gemini: { apiKey: env.GEMINI_API_KEY || undefined, model: env.GEMINI_MODEL || 'gemini-3.6-flash', reserve: env.GEMINI_MODELO_RESERVA || 'gemini-3.5-flash-lite' },
     openaiApiKey: env.OPENAI_API_KEY || undefined,
   };
 }
