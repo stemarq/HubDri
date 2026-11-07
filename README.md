@@ -103,13 +103,19 @@ O código `ORC-0001` vem de uma sequence e o token público é gerado no banco. 
 
 ### Login e permissões
 
-O esquema já está pronto para login pelo Supabase Auth, mas a tela de login do hub ainda não existe.
+Com o Supabase configurado, o hub exige login. A tela fica em `/login` e tem também "Esqueci minha senha", criação de senha por convite e uma tela de espera para contas não liberadas.
+
+O login é feito pelo servidor, e a sessão fica em cookies `httpOnly`. O navegador não fala com o Supabase, e imagens e PDF abertos por link continuam protegidos. A sessão é renovada sozinha e dura até a pessoa clicar em **Sair**, no menu com as iniciais no topo.
+
+Aprovações, edições e pedidos de mudança registram quem fez. O nome aparece no card de aprovação e no histórico.
+
+Sem Supabase, não há login. Vale só a senha opcional `HUB_PASSWORD`.
 
 - **Conta não é acesso:** toda conta nova ganha um perfil **inativo**, e só a dona libera.
 - **Equipe ativa:** lê os orçamentos, cria e edita orçamentos, marca notificações como lidas e grava histórico só em seu próprio nome.
 - **Dona:** além disso, libera pessoas, muda papéis e apaga orçamentos.
 - **Chave `anon`:** não acessa nada.
-- **Servidor do hub:** usa a `service_role` (webhooks, página da cliente e a interface atual), então não depende dessas regras.
+- **Servidor do hub:** usa a `service_role`. Ele confere o login e o perfil ativo antes de cada ação; as regras acima protegem o acesso direto ao banco.
 
 Para liberar a primeira dona:
 1. Crie o usuário em **Authentication → Users → Add user**.
@@ -119,7 +125,13 @@ Para liberar a primeira dona:
    update public.perfis set papel = 'dona', ativo = true where email = 'email@dela.com';
    ```
 
-Vale desligar o cadastro aberto (**Authentication → Sign In / Providers → Allow new users to sign up**) e entrar só por convite.
+Configure também, no painel do Supabase:
+- **Authentication → URL Configuration:**
+  - **Site URL:** o endereço do hub (o mesmo `PUBLIC_URL`).
+  - **Redirect URLs:** `<PUBLIC_URL>/definir-senha`.
+
+  Assim os links de convite e de recuperação de senha abrem a tela de criar senha.
+- **Authentication → Sign In / Providers:** desligue **Allow new users to sign up** e entre só por convite (**Users → Invite user**). Mesmo com o cadastro aberto, ninguém acessa sem ser liberada.
 
 Para aplicar:
 
@@ -149,5 +161,6 @@ Ao subir, o hub mostra `dados: Supabase`. Sem essas variáveis, ele continua gra
 ## Limitações do MVP
 
 - Um processo só: mesmo com o Supabase, os dados ficam em memória. Rodar duas instâncias do hub ao mesmo tempo causaria conflito.
-- Login do hub é só uma senha opcional (`HUB_PASSWORD`, HTTP Basic). Feito para uma usuária só: não há perfis nem registro de quem aprovou.
+- Sem Supabase, o acesso é só uma senha opcional (`HUB_PASSWORD`, HTTP Basic), sem perfis nem registro de quem aprovou.
+- Uma pessoa desativada pela dona pode levar até 30 s para perder o acesso.
 - Notificações por polling (6 s), sem push/e-mail.
