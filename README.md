@@ -103,7 +103,7 @@ O código `ORC-0001` vem de uma sequence e o token público é gerado no banco. 
 
 ### Login e permissões
 
-Com o Supabase configurado, o hub exige login. A tela fica em `/login` e tem também "Esqueci minha senha", criação de senha por convite e uma tela de espera para contas não liberadas.
+Com o Supabase configurado, o hub exige login. A tela fica em `/login` e tem também "Esqueci minha senha", criação de senha por convite e uma tela para contas bloqueadas.
 
 O login é feito pelo servidor, e a sessão fica em cookies `httpOnly`. O navegador não fala com o Supabase, e imagens e PDF abertos por link continuam protegidos. A sessão é renovada sozinha e dura até a pessoa clicar em **Sair**, no menu com as iniciais no topo.
 
@@ -111,19 +111,13 @@ Aprovações, edições e pedidos de mudança registram quem fez. O nome aparece
 
 Sem Supabase, não há login. Vale só a senha opcional `HUB_PASSWORD`.
 
-- **Conta não é acesso:** toda conta nova ganha um perfil **inativo**, e só a dona libera.
-- **Equipe ativa:** lê os orçamentos, cria e edita orçamentos, marca notificações como lidas e grava histórico só em seu próprio nome.
-- **Dona:** além disso, libera pessoas, muda papéis e apaga orçamentos.
+- **Quem tem conta entra:** não há etapa de liberação. A primeira conta criada vira **dona**; as seguintes entram como **equipe**.
+- **Equipe:** lê os orçamentos, cria e edita orçamentos, marca notificações como lidas e grava histórico só em seu próprio nome.
+- **Dona:** além disso, muda papéis, bloqueia pessoas (`ativo = false`) e apaga orçamentos.
 - **Chave `anon`:** não acessa nada.
-- **Servidor do hub:** usa a `service_role`. Ele confere o login e o perfil ativo antes de cada ação; as regras acima protegem o acesso direto ao banco.
+- **Servidor do hub:** usa a `service_role`. Ele confere o login e se a conta não está bloqueada antes de cada ação; as regras acima protegem o acesso direto ao banco.
 
-Para liberar a primeira dona:
-1. Crie o usuário em **Authentication → Users → Add user**.
-2. Rode no SQL Editor:
-
-   ```sql
-   update public.perfis set papel = 'dona', ativo = true where email = 'email@dela.com';
-   ```
+Para começar, crie a conta da dona em **Authentication → Users → Add user → Create new user**, com **Auto Confirm User** marcado. Ela já pode entrar em `/login`.
 
 Configure também, no painel do Supabase:
 - **Authentication → URL Configuration:**
@@ -131,7 +125,7 @@ Configure também, no painel do Supabase:
   - **Redirect URLs:** `<PUBLIC_URL>/definir-senha`.
 
   Assim os links de convite e de recuperação de senha abrem a tela de criar senha.
-- **Authentication → Sign In / Providers:** desligue **Allow new users to sign up** e entre só por convite (**Users → Invite user**). Mesmo com o cadastro aberto, ninguém acessa sem ser liberada.
+- **Authentication → Sign In / Providers:** desligue **Allow new users to sign up**. Como não há liberação, qualquer pessoa que conseguir criar conta entra no hub. Crie as contas só pelo painel (**Users → Add user** ou **Invite user**).
 
 Para aplicar:
 
