@@ -5,3 +5,6 @@ data/
 
 # PDF de apresentação da Dri (tem fotos de clientes): não vai para o repositório público
 /*.pdf
+
+# Cache local da CLI do Supabase
+supabase/.temp/
