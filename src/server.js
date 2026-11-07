@@ -15,8 +15,9 @@ const app = express();
 app.use(express.json({ limit: "40mb" }));
 app.use(express.urlencoded({ extended: false }));
 
+// .then() pega também os erros lançados na hora (rotas síncronas); antes eles viravam uma página HTML do Express.
 const rota = (fn) => (req, res) =>
-  Promise.resolve(fn(req, res)).catch((e) => {
+  Promise.resolve().then(() => fn(req, res)).catch((e) => {
     if (!(e instanceof ErroFluxo)) console.error(e);
     res.status(e.status || 500).json({ erro: e.message });
   });
