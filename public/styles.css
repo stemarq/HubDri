@@ -19,7 +19,13 @@
 }
 .nav a.ativo { background: var(--surface); color: var(--primary); border-color: var(--border); box-shadow: var(--shadow); }
 
-.notif { grid-area: sino; position: relative; }
+.topo-direita { grid-area: sino; display: flex; align-items: center; gap: 8px; }
+.notif, .conta { position: relative; }
+.avatar { font: 600 14px/1 var(--sans); color: var(--primary); background: var(--creme); border-color: var(--nude); }
+.conta-info { display: grid; gap: 2px; padding: 18px 18px 14px; overflow-wrap: anywhere; }
+.conta-info strong { font-weight: 600; }
+.conta-info .label { margin-top: 6px; }
+.painel-conta form { padding: 0 18px 18px; }
 .sino {
   position: relative; width: 44px; height: 44px; display: grid; place-items: center;
   border: 1px solid var(--border); border-radius: var(--pill); background: var(--surface); cursor: pointer;
@@ -205,6 +211,7 @@ h2 .label { font-size: 11px; }
 @media (min-width: 640px) {
   .topo { grid-template-columns: auto 1fr auto; grid-template-areas: "marca nav sino"; padding: 14px 24px; gap: 24px; }
   .painel { position: absolute; left: auto; right: 0; top: calc(100% + 10px); width: 380px; }
+  .painel-conta { width: 280px; }
   main { padding: 28px 24px 64px; }
   .aviso { left: auto; right: 24px; width: 380px; }
   .fila a { grid-template-columns: 28px 64px minmax(0, 1fr) auto; padding: 14px 16px; }

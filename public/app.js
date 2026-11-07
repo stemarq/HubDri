@@ -22,6 +22,11 @@ async function api(url, opts = {}) {
     headers: { "content-type": "application/json", ...(opts.headers || {}) },
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
+  // Sessão expirada ou encerrada: volta para a tela de login.
+  if (r.status === 401 && (!meta || meta.usuario)) {
+    location.href = "/login";
+    return new Promise(() => {});
+  }
   const dados = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(dados.erro || `Erro ${r.status}`);
   return dados;
@@ -129,6 +134,29 @@ $("#ler-todas").addEventListener("click", async () => {
   carregarNotificacoes();
 });
 
+// ---------- Conta (login) ----------
+
+const PAPEIS = { dona: "Dona", equipe: "Equipe" };
+
+function mostrarConta(u) {
+  if (!u) return;
+  const iniciais = u.nome.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "?";
+  $("#avatar").textContent = iniciais;
+  $("#conta-nome").textContent = u.nome;
+  $("#conta-email").textContent = u.email;
+  $("#conta-papel").textContent = PAPEIS[u.papel] || u.papel;
+  $("#conta").hidden = false;
+}
+
+$("#avatar").addEventListener("click", () => {
+  const p = $("#painel-conta"), abrir = p.hidden;
+  p.hidden = !abrir;
+  $("#avatar").setAttribute("aria-expanded", String(abrir));
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".conta")) { $("#painel-conta").hidden = true; $("#avatar").setAttribute("aria-expanded", "false"); }
+});
+
 async function simularLead() {
   const r = await api("/api/dev/simular", { method: "POST" });
   avisar(`Lead simulado recebido: ${r.codigo}`);
@@ -217,7 +245,7 @@ async function telaOrcamento(id) {
         <section class="card secao" id="card-aprov" style="order:2">
           ${calc ? `<div class="resumo-total"><span class="label">Total</span><b>${brl(calc.total)}</b></div>` : ""}
           ${aprovado
-            ? `<span class="ok">✓ Aprovado em ${dataHora(o.aprovadoEm)}</span>`
+            ? `<span class="ok">✓ Aprovado em ${dataHora(o.aprovadoEm)}${o.aprovadoPorNome ? ` por ${esc(o.aprovadoPorNome)}` : ""}</span>`
             : `<button class="btn cheio bloco" data-aprovar ${podeAprovar ? "" : "disabled"}>Aprovar e enviar</button>
                <p class="dica">${edicao ? "Salve a edição antes de aprovar." : o.status === "calculando" ? "Aguardando o cálculo terminar." : "Ao aprovar, o PDF vai direto para a IA do WhatsApp."}</p>`}
         </section>
@@ -291,7 +319,7 @@ async function telaOrcamento(id) {
         <section class="card secao" style="order:11">
           <h2>Histórico</h2>
           <ol class="historico">
-            ${[...o.historico].reverse().map((h) => `<li><span class="label">${dataHora(h.em)}</span>${esc(h.evento)}${h.detalhe ? ` <span class="muted">— ${esc(h.detalhe)}</span>` : ""}</li>`).join("")}
+            ${[...o.historico].reverse().map((h) => `<li><span class="label">${dataHora(h.em)}</span>${esc(h.evento)}${h.detalhe ? ` <span class="muted">— ${esc(h.detalhe)}</span>` : ""}${h.autorNome ? ` <span class="muted">· ${esc(h.autorNome)}</span>` : ""}</li>`).join("")}
           </ol>
         </section>
       </div>
@@ -470,6 +498,8 @@ async function ciclo() {
 
 (async function iniciar() {
   meta = await api("/api/meta");
+  mostrarConta(meta.usuario);
+  try { sessionStorage.removeItem("hub_link"); } catch {} // token do link de senha já foi usado
   await render();
   await carregarNotificacoes();
   setInterval(ciclo, 6000);
