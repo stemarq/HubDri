@@ -1,9 +1,9 @@
 # HubDri
 
-Hub de captação de clientes. A IA do WhatsApp coleta os dados da cliente e envia para o hub; o hub calcula o orçamento (com Claude), gera o PDF, passa pelas aprovações internas e devolve o PDF para a IA do WhatsApp continuar a conversa.
+Hub de captação de clientes. A IA do WhatsApp coleta os dados da cliente e envia para o hub; o hub calcula o orçamento (com Claude), gera o PDF e, com um clique de aprovação, devolve o PDF para a IA do WhatsApp continuar a conversa.
 
 ```
-WhatsApp (IA) ──lead──▶ Hub ──▶ cálculo (IA/regras) ──▶ aprovações (Comercial, Financeiro)
+WhatsApp (IA) ──lead──▶ Hub ──▶ cálculo (IA/regras) ──▶ aprovação (botão único)
       ▲                                                          │
       └────────── PDF + mensagem sugerida ◀──────────────────────┘
 cliente aprova (botão do PDF ou no chat) ou pede ajustes (só no chat) ──▶ Hub notifica
@@ -22,7 +22,7 @@ Sem configurar nada, o hub funciona em modo local: cálculo por regras, retorno 
 ## Telas
 
 - **Fila** — orçamentos que precisam de ação, **mais antigos primeiro**. Passou de `atrasoHoras` (config) aparece marcado como atrasado. Abas: Pendentes / Concluídos / Todos.
-- **Orçamento** — dados da cliente, cálculo (editável), briefing, imagens do chat, conversa, aprovações, pedido de mudança, PDF e histórico.
+- **Orçamento** — dados da cliente, cálculo (editável), briefing, imagens do chat, conversa, botão **Aprovar e enviar**, pedido de mudança, PDF e histórico.
 - **Notificações** — novo lead, novas informações no chat, resposta da cliente, falha de envio. O hub atualiza a cada 6 s.
 - **Página da cliente** (`/p/:token`) — aberta pelo botão *Aprovar orçamento* do PDF. Não há link para pedir alterações: ajustes são combinados na conversa do WhatsApp.
 
@@ -31,13 +31,13 @@ Sem configurar nada, o hub funciona em modo local: cálculo por regras, retorno 
 | Status | Significa |
 |---|---|
 | `calculando` | IA/regras montando o orçamento |
-| `aguardando_aprovacao` | Esperando as etapas de `etapasAprovacao` |
-| `enviado` | Todas aprovaram; PDF devolvido à IA do WhatsApp |
+| `aguardando_aprovacao` | Esperando a aprovação (botão único) |
+| `enviado` | Aprovado; PDF devolvido à IA do WhatsApp |
 | `falha_envio` | O endpoint do WhatsApp falhou (botão de reenvio) |
 | `mudanca_cliente` | A cliente pediu ajustes na conversa (a IA do WhatsApp repassa) → recalcular/editar e aprovar de novo |
 | `aceito_cliente` | A cliente aprovou |
 
-Pedir mudança ou editar itens **zera as aprovações**.
+Pedir mudança ou editar itens **desfaz a aprovação** — é preciso aprovar de novo para enviar.
 
 ## Integração com a IA do WhatsApp
 
@@ -81,7 +81,7 @@ O retorno **não** traz link para a cliente pedir alterações — só `linkApro
 
 ## Cálculo
 
-`config/hub.config.json` define o catálogo de preços, as etapas de aprovação, validade, desconto máximo e as instruções para a IA. **Os preços do catálogo são de exemplo — troque pelos valores reais.**
+`config/hub.config.json` define o catálogo de preços, validade, desconto máximo e as instruções para a IA. **Os preços do catálogo são de exemplo — troque pelos valores reais.**
 
 Com `ANTHROPIC_API_KEY`, o Claude (`claude-opus-5-5`) lê o briefing, os dados do evento, a conversa e até 6 fotos (referências de make) e escolhe **apenas códigos e quantidades** do catálogo; os valores e totais são sempre calculados pelo hub. Sem chave (ou se a IA falhar), entra o cálculo por regras (noiva, nº de pessoas, penteado, cílios, horário antes das 7h, km) com um aviso para revisar.
 
