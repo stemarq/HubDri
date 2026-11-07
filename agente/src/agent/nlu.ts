@@ -127,7 +127,8 @@ export function parseTimes(text: string): TimeMention[] {
 
 type TimeFields = Pick<Extracted, 'readyMin' | 'eventStartMin' | 'desiredStartMin' | 'ambiguousHour' | 'periodExplicit'>;
 
-export function classifyTimes(text: string, awaiting?: string): TimeFields {
+export function classifyTimes(text: string, awaiting?: string, asked: string[] = []): TimeFields {
+  const wasAsked = (k: string) => awaiting === k || asked.includes(k);
   const r: TimeFields = {};
   const times = parseTimes(text);
   const assign = (field: 'readyMin' | 'eventStartMin' | 'desiredStartMin', tm: TimeMention) => {
@@ -136,13 +137,13 @@ export function classifyTimes(text: string, awaiting?: string): TimeFields {
   };
   for (const tm of times) {
     // Só o trecho após o último separador de cláusula conta como contexto.
-    const clause = tm.ctx.split(/[,.;!?]| e /).pop() ?? tm.ctx;
-    if (/pront[ao]|estar pront/.test(clause)) assign('readyMin', tm);
+    const clause = tm.ctx.split(/[,.;!?]| e | (?=preciso )/).pop() ?? tm.ctx;
+    if (/pront[ao]|\bestar\b/.test(clause)) assign('readyMin', tm);
     else if (/arrum|maquiar|me produzir|comecar a|iniciar|atendimento|chegar/.test(clause)) assign('desiredStartMin', tm);
     else if (/evento|cerimonia|festa|casamento|formatura|comeca|inicio|inicia|missa|culto|jantar|almoco/.test(clause)) assign('eventStartMin', tm);
-    else if (awaiting === 'ready' && times.length === 1) assign('readyMin', tm);
+    else if (wasAsked('ready') && times.length === 1) assign('readyMin', tm);
   }
-  if (awaiting === 'ready' && times.length === 0) {
+  if (wasAsked('ready') && times.length === 0) {
     const bare = norm(text).match(/^\s*(?:as\s+)?(\d{1,2})(?::(\d{2}))?\s*$/);
     if (bare) {
       const h = +bare[1];
@@ -165,14 +166,15 @@ const EVENTS: [RegExp, string][] = [
 const INJECTION = /ignore (as|todas|suas)|ignore (previous|all)|desconsidere (as|suas)|esqueca (as|suas)|system prompt|prompt do sistema|voce agora e|aja como|de graca|gratis|desconto de \d+|preco (final )?(e|sera|fica) (r\$)?\s*\d|mude o preco|novo preco/;
 const WEEKDAY_RE = /domingo|segunda|terca|quarta|quinta|sexta|sabado/;
 
-export function extract(text: string, now: Date, awaiting?: string): Extracted {
+export function extract(text: string, now: Date, awaiting?: string, asked: string[] = []): Extracted {
+  const wasAsked = (k: string) => awaiting === k || asked.includes(k);
   const raw = norm(text);          // para sinais de intenção (sim/não/humano/aceite)
   const t = preprocess(raw);       // gírias, números por extenso e erros de digitação corrigidos
   const e: Extracted = {};
 
   if (INJECTION.test(raw)) e.injectionSuspected = true;
 
-  const both = awaiting === 'service' && /\b(os dois|ambos|as duas|os 2|tudo|completo)\b/.test(t);
+  const both = wasAsked('service') && /\b(os dois|ambos|as duas|os 2|tudo|completo)\b/.test(t);
   const wantsMakeup = both || /maquiagem|maquiar|make\b|makeup/.test(t);
   const wantsHair = both || /penteado|cabelo|hair|babyliss|escova/.test(t);
   for (const [re, r] of ROLES) if (re.test(t)) { e.role = r; break; }
@@ -190,14 +192,14 @@ export function extract(text: string, now: Date, awaiting?: string): Extracted {
     if (/fim de semana|final de semana|\bfds\b/.test(t)) e.ambiguousDate = 'weekend';
     else if (/semana que vem|proxima semana|mes que vem|proximo mes/.test(t)) e.ambiguousDate = 'week';
   }
-  const tf = classifyTimes(text, awaiting);
+  const tf = classifyTimes(text, awaiting, asked);
   Object.assign(e, tf);
   if (/\b(na verdade|errei|corrigindo|quer dizer|ops|mudei|mudou|trocar|trocando|melhor)\b/.test(raw) && tf.readyMin === undefined && tf.eventStartMin === undefined && tf.desiredStartMin === undefined) {
     // correção com um único horário e sem rótulo: assume o horário principal (pronta)
     const only = parseTimes(text);
     if (only.length === 1) { if (only[0].min !== undefined) { e.readyMin = only[0].min; e.periodExplicit = only[0].periodExplicit; } else e.ambiguousHour = only[0].ambiguousHour; }
   }
-  if (awaiting === 'period' && tf.readyMin === undefined) {
+  if (wasAsked('period') && tf.readyMin === undefined) {
     const p = t.match(/\b(manha|tarde|noite|madrugada)\b/);
     if (p) e.period = p[1] as Extracted['period'];
   }
@@ -207,7 +209,7 @@ export function extract(text: string, now: Date, awaiting?: string): Extracted {
   const cep = /\b\d{5}-?\d{3}\b/.test(text);
   const streetTail = street ? text.slice(street.index ?? 0, (street.index ?? 0) + 200) : '';
   if (street && (/\d{1,5}/.test(streetTail) || cep)) e.address = { raw: streetTail.trim(), full: true };
-  else if (awaiting === 'address' && /\d/.test(text) && text.trim().length > 8) e.address = { raw: text.trim().slice(0, 200), full: true };
+  else if (wasAsked('address') && /\d/.test(text) && text.trim().length > 8 && parseTimes(text).length === 0 && !d) e.address = { raw: text.trim().slice(0, 200), full: true };
   for (const n of NEIGHBORHOODS) if (t.includes(norm(n))) { e.neighborhood = n; break; }
   if (!e.neighborhood && !e.address) {
     const loc = text.match(/\b(?:em|na|no|pra|para|moro em)\s+((?:\p{Lu}[\p{L}'-]+)(?:\s+(?:d[aeo]s?\s+)?\p{Lu}[\p{L}'-]+){0,3})/u);
