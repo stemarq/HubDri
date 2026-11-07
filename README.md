@@ -194,3 +194,10 @@ O agente (pasta `agente/`) é a "IA do WhatsApp" deste hub. Fluxo:
 Variáveis: `AGENTE_URL`/`AGENTE_TOKEN` no `.env` do hub; `HUB_URL`/`HUB_WEBHOOK_TOKEN`/`HUB_CALLBACK_TOKEN` no `agente/.env` (modelos nos `.env.example`). Google Agenda: `agente/GUIA_GOOGLE_AGENDA.md`.
 
 Para rodar tudo local: `npm start` na raiz (hub, `PORT`) e `npm start` dentro de `agente/` (porta `ADRI_PORT`, padrão 3001). Se o seu ambiente já tiver `SUPABASE_URL` definida (outro projeto), limpe-a ao subir o hub, ou ele tentará usar aquele banco.
+
+### Configurações editáveis, Gemini e entrega
+
+- **Aba Configurações:** a Adriana edita, sem mexer em arquivo, o catálogo e as regras do orçamento (preços, validade, desconto máximo, rodapé do PDF, instruções da IA) e, da ADRI, o endereço de saída, tempos de preparo/trajeto, duração dos serviços e as respostas automáticas (FAQ). As edições do hub ficam em `data/config-editada.json` (fora do Git) e valem na hora.
+- **Gemini no agente:** com `GEMINI_API_KEY` (a mesma do hub) a ADRI usa o Gemini para entender mensagens difíceis e **transcrever áudios de voz**. Sem a chave, segue só com regras e avisa que não ouve áudio.
+- **Entrega com `.env` vazio:** `.env` nunca vai para o Git. Na entrega, a Adriana roda `npm run env:novo` (cria `.env` e `agente/.env` vazios a partir dos modelos, sem sobrescrever os existentes) e preenche as próprias chaves.
+
