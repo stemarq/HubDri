@@ -101,7 +101,8 @@ Com `GEMINI_API_KEY` (Gemini, modelo `gemini-3.6-flash`, trocável em `GEMINI_MO
 
 - **Escolha do provedor:** com só uma chave no `.env`, vale aquela. Com as duas, o Gemini tem preferência, a menos que `IA_PROVEDOR=claude` diga o contrário. `IA_DESATIVADA=1` força o cálculo por regras.
 - **Onde aparece:** ao iniciar, o hub mostra no terminal qual IA está em uso. No orçamento aparece "Gerado pela IA (Gemini)".
-- **Mesmo comportamento nos dois:** mesmo formato de resposta, as mesmas travas (só códigos do catálogo, desconto até o máximo configurado) e a mesma volta para as regras se a IA falhar, bloquear ou demorar mais de 90 s.
+- **Sobrecarga do Gemini:** quando o Google devolve sobrecarga ou limite de uso (HTTP 429/5xx), o hub tenta de novo e depois usa o modelo reserva `gemini-3.5-flash-lite`, trocável em `GEMINI_MODELO_RESERVA` (`nenhum` desliga). Se ainda assim falhar, calcula pelas regras.
+- **Mesmo comportamento nos dois:** mesmo formato de resposta, as mesmas travas (só códigos do catálogo, desconto até o máximo configurado) e a mesma volta para as regras se a IA falhar, bloquear ou demorar demais.
 - **Privacidade (Gemini):** no plano gratuito do Google AI Studio, o Google pode usar o conteúdo enviado (conversa, fotos, nome e telefone das clientes) para melhorar os produtos dele. Para uso real, ative o faturamento (plano pago).
 
 ## Visual
