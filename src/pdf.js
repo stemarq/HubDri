@@ -131,12 +131,12 @@ export function gerarPdf(orc, stream) {
     imgs.forEach((img, i) => {
       const cx = L + (i % n) * (tam + gap);
       const cy = y + Math.floor(i / n) * (tam + gap);
+      doc.save();
       try {
-        doc.save();
         doc.roundedRect(cx, cy, tam, tam, 10).clip();
         doc.image(path.join(UPLOADS_DIR, img.arquivo), cx, cy, { cover: [tam, tam], align: "center", valign: "center" });
-        doc.restore();
-      } catch { /* formato não suportado */ }
+      } catch { /* imagem ausente ou formato não suportado */ }
+      doc.restore();
     });
     y += Math.ceil(imgs.length / n) * (tam + gap) + 12;
   }
