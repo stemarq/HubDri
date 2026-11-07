@@ -1,8 +1,7 @@
 // IA do hub: lê o briefing + fotos da conversa e propõe itens/quantidades do catálogo.
 import fs from "node:fs";
-import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
-import { UPLOADS_DIR } from "./store.js";
+import { garantirArquivo } from "./store.js";
 import { env } from "./config.js";
 
 const MODELO = "claude-opus-5-5";
@@ -45,15 +44,15 @@ function schema(codigos) {
   };
 }
 
-function blocosImagem(orc) {
+async function blocosImagem(orc) {
   const blocos = [];
   for (const img of (orc.imagens || []).slice(0, MAX_IMAGENS)) {
     if (!TIPOS_IMAGEM.has(img.mimeType)) continue;
     try {
-      const data = fs.readFileSync(path.join(UPLOADS_DIR, img.arquivo)).toString("base64");
+      const data = fs.readFileSync(await garantirArquivo(img.arquivo)).toString("base64");
       blocos.push({ type: "image", source: { type: "base64", media_type: img.mimeType, data } });
     } catch {
-      /* imagem ausente no disco: ignora */
+      /* imagem indisponível: ignora */
     }
   }
   return blocos;
@@ -91,7 +90,7 @@ export async function proporOrcamento(orc, cfg, pedidoDeMudanca) {
     fallbacks: "default",
     output_config: { effort: "medium", format: { type: "json_schema", schema: schema(cfg.catalogo.map((c) => c.codigo)) } },
     system,
-    messages: [{ role: "user", content: [...blocosImagem(orc), { type: "text", text: texto }] }],
+    messages: [{ role: "user", content: [...(await blocosImagem(orc)), { type: "text", text: texto }] }],
   });
 
   if (resp.stop_reason === "refusal") throw new Error("A IA recusou o pedido.");

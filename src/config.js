@@ -17,4 +17,6 @@ export const env = {
   hubPassword: process.env.HUB_PASSWORD || "",
   iaDesativada: process.env.IA_DESATIVADA === "1",
   producao: process.env.NODE_ENV === "production",
+  supabaseUrl: process.env.SUPABASE_URL || "",
+  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
 };

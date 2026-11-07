@@ -1,9 +1,7 @@
 // Regras do fluxo: lead → cálculo → aprovações internas → retorno ao WhatsApp → resposta da cliente.
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
 import * as store from "./store.js";
-import { agora, novoId, salvar, notificar, UPLOADS_DIR } from "./store.js";
+import { agora, novoId, salvar, notificar } from "./store.js";
 import { config, env } from "./config.js";
 import { montarCalculo, propostaPorRegras, recalcularTotais } from "./calculo.js";
 import { iaDisponivel, proporOrcamento } from "./ia.js";
@@ -57,13 +55,11 @@ async function salvarImagem(orc, img) {
   } else return null;
 
   mimeType ||= "image/jpeg";
-  const dir = path.join(UPLOADS_DIR, orc.id);
-  fs.mkdirSync(dir, { recursive: true });
-  const nome = `${crypto.randomBytes(6).toString("hex")}.${EXT[mimeType] || "bin"}`;
-  fs.writeFileSync(path.join(dir, nome), buf);
+  const arquivo = `${orc.id}/${crypto.randomBytes(6).toString("hex")}.${EXT[mimeType] || "bin"}`;
+  await store.salvarArquivo(arquivo, buf, mimeType);
   return {
     id: novoId(),
-    arquivo: `${orc.id}/${nome}`,
+    arquivo,
     mimeType,
     recebidaEm: img.recebidaEm || agora(),
   };

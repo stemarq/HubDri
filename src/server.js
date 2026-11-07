@@ -1,7 +1,7 @@
 import express from "express";
 import path from "node:path";
 import * as store from "./store.js";
-import { salvar, UPLOADS_DIR } from "./store.js";
+import { salvar } from "./store.js";
 import { config, env } from "./config.js";
 import * as fluxo from "./orcamentos.js";
 import { STATUS, PENDENTES, ErroFluxo } from "./orcamentos.js";
@@ -66,12 +66,18 @@ app.get("/p/:token", (req, res) => {
   res.send(paginaCliente(orc));
 });
 
-app.get("/p/:token/orcamento.pdf", (req, res) => {
+app.get("/p/:token/orcamento.pdf", async (req, res) => {
   const orc = store.acharPorToken(req.params.token);
   if (!orc?.calculo || !orc.aprovadoEm) return res.status(404).send("PDF indisponível");
+  await enviarPdf(orc, res);
+});
+
+// O PDF usa as imagens do chat: garante que estejam no cache local antes de gerar.
+async function enviarPdf(orc, res) {
+  await Promise.allSettled(orc.imagens.map((i) => store.garantirArquivo(i.arquivo)));
   res.type("pdf").set("Content-Disposition", `inline; filename="${orc.codigo}.pdf"`);
   gerarPdf(orc, res);
-});
+}
 
 app.post("/p/:token/resposta", async (req, res) => {
   const orc = store.acharPorToken(req.params.token);
@@ -96,7 +102,13 @@ function autenticar(req, res, next) {
 }
 app.use(autenticar);
 app.use(express.static(path.resolve("public")));
-app.use("/uploads", express.static(UPLOADS_DIR));
+// Imagens do chat: só serve arquivos que pertencem a algum orçamento (vindas do Storage ou do disco).
+app.get("/uploads/:orcamento/:arquivo", rota(async (req, res) => {
+  const caminho = `${req.params.orcamento}/${req.params.arquivo}`;
+  if (!store.orcamentos().some((o) => o.imagens.some((i) => i.arquivo === caminho)))
+    throw new ErroFluxo("Imagem não encontrada", 404);
+  res.set("Cache-Control", "private, max-age=86400").sendFile(await store.garantirArquivo(caminho));
+}));
 
 const resumo = (o) => ({
   id: o.id,
@@ -150,11 +162,10 @@ app.get("/api/orcamentos/:id", rota((req, res) => {
   res.json({ ...orc, linkPublico: fluxo.linkPublico(orc) });
 }));
 
-app.get("/api/orcamentos/:id/pdf", rota((req, res) => {
+app.get("/api/orcamentos/:id/pdf", rota(async (req, res) => {
   const orc = store.acharOrcamento(req.params.id);
   if (!orc?.calculo) throw new ErroFluxo("Orçamento ainda sem cálculo", 404);
-  res.type("pdf").set("Content-Disposition", `inline; filename="${orc.codigo}.pdf"`);
-  gerarPdf(orc, res);
+  await enviarPdf(orc, res);
 }));
 
 app.post("/api/orcamentos/:id/aprovar", rota(async (req, res) => {
@@ -190,9 +201,18 @@ if (!env.producao) {
   }));
 }
 
-app.listen(env.port, () => {
-  console.log(`HubDri rodando em ${env.publicUrl}`);
+const servidor = app.listen(env.port, () => {
+  console.log(`HubDri rodando em ${env.publicUrl} · dados: ${store.modo === "supabase" ? "Supabase" : "data/db.json"}`);
   if (!env.webhookToken) console.warn("! HUB_WEBHOOK_TOKEN vazio: webhooks aceitam qualquer chamada.");
   if (!env.callbackUrl) console.warn("! WHATSAPP_CALLBACK_URL vazio: retorno ao WhatsApp em modo simulado.");
   if (!iaDisponivel()) console.warn("! Sem ANTHROPIC_API_KEY: orçamentos calculados por regras.");
 });
+
+// Ao desligar, termina as gravações pendentes no Supabase antes de sair.
+for (const sinal of ["SIGINT", "SIGTERM"]) {
+  process.once(sinal, async () => {
+    servidor.close();
+    await store.aguardarGravacoes();
+    process.exit(0);
+  });
+}
