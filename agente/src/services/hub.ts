@@ -79,6 +79,14 @@ export function buildLeadPayload(ctx: Ctx, quoteId: string) {
       resumo: `${cap(ev.role) ?? 'Cliente'} quer ${svcName}${ev.eventType ? ` para ${ev.eventType}` : ''} em ${dateBR}${ready ? `, pronta às ${ready}` : ''}. Atendimento das ${fmtEpochTime(sch.startEpoch)} às ${fmtEpochTime(sch.endEpoch)}, em ${ev.address ?? ev.neighborhood}${km ? ` (~${km} km)` : ''}.`,
       respostas,
     },
+    // Estimativa estruturada (ida e volta, em reais): o hub põe como item do orçamento a domicílio.
+    ...(est.length ? { deslocamento: {
+      valor: est.reduce((s, e) => s + (e.predicted_cents ?? 0), 0) / 100,
+      km: km ?? null,
+      minutos: out?.duration_s ? Math.round(out.duration_s / 60) : null,
+      confianca: out?.confidence ?? 'baixa',
+      simulado: !!out?.simulated,
+    } } : {}),
     conversa, imagens,
   };
 }
