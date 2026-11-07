@@ -165,7 +165,7 @@ async function telaFila() {
             <span class="meta">
               <span class="chip ${o.status}">${meta.status[o.status]}</span>
               ${atrasado ? `<span class="chip atraso">Atrasado</span>` : ""}
-              <span class="label">${haQuanto(o.criadoEm)} · ${o.codigo} · ${o.aprovacoes.feitas}/${o.aprovacoes.total} aprov.</span>
+              <span class="label">${haQuanto(o.criadoEm)} · ${o.codigo}</span>
             </span>
           </a></li>`;
         }).join("")}
@@ -181,7 +181,7 @@ async function telaFila() {
 
 // ---------- Detalhe ----------
 
-const PASSOS = ["Recebido", "Calculado", "Aprovações", "Enviado", "Resposta"];
+const PASSOS = ["Recebido", "Calculado", "Aprovação", "Enviado", "Resposta"];
 function passoAtual(o) {
   return { calculando: 1, aguardando_aprovacao: 2, enviando: 3, falha_envio: 3, enviado: 4, mudanca_cliente: 4, aceito_cliente: 5 }[o.status];
 }
@@ -193,8 +193,8 @@ async function telaOrcamento(id) {
   const atual = passoAtual(o);
   const calc = o.calculo;
   const podeAgir = ["aguardando_aprovacao", "mudanca_cliente", "falha_envio"].includes(o.status);
-  const todasAprovadas = o.aprovacoes.every((a) => a.status === "aprovado");
-  const proxima = o.status === "aguardando_aprovacao" && !edicao ? o.aprovacoes.find((a) => a.status !== "aprovado") : null;
+  const aprovado = Boolean(o.aprovadoEm);
+  const podeAprovar = o.status === "aguardando_aprovacao" && !edicao;
   const ev = o.evento || {};
   const cls = (i) => (i < atual ? "feito" : i === atual ? "atual" : "");
 
@@ -216,16 +216,10 @@ async function telaOrcamento(id) {
       <aside class="coluna lateral">
         <section class="card secao" id="card-aprov">
           ${calc ? `<div class="resumo-total"><span class="label">Total</span><b>${brl(calc.total)}</b></div>` : ""}
-          <h2>Aprovações</h2>
-          ${o.aprovacoes.map((a) => `
-            <div class="aprov">
-              <span><strong>${esc(a.etapa)}</strong><br>
-                <span class="label">${a.status === "aprovado" ? dataHora(a.em) : "Pendente"}</span></span>
-              ${a.status === "aprovado"
-                ? `<span class="ok">✓ Aprovado</span>`
-                : `<button class="btn cheio pequeno" data-aprovar="${esc(a.etapa)}" ${o.status !== "aguardando_aprovacao" || edicao ? "disabled" : ""}>Aprovar</button>`}
-            </div>`).join("")}
-          <p class="dica">Com todas as aprovações, o PDF volta sozinho para a IA do WhatsApp.</p>
+          ${aprovado
+            ? `<span class="ok">✓ Aprovado em ${dataHora(o.aprovadoEm)}</span>`
+            : `<button class="btn cheio bloco" data-aprovar ${podeAprovar ? "" : "disabled"}>Aprovar e enviar</button>
+               <p class="dica">${edicao ? "Salve a edição antes de aprovar." : o.status === "calculando" ? "Aguardando o cálculo terminar." : "Ao aprovar, o PDF vai direto para a IA do WhatsApp."}</p>`}
         </section>
 
         ${o.status === "falha_envio" ? `
@@ -245,11 +239,11 @@ async function telaOrcamento(id) {
           <h2>Solicitar mudança</h2>
           <textarea id="mudanca" rows="3" placeholder="Ex.: incluir penteado para as madrinhas" ${podeAgir ? "" : "disabled"}></textarea>
           <button class="btn bloco" id="pedir-mudanca" style="margin-top:10px" ${podeAgir ? "" : "disabled"}>Recalcular com IA</button>
-          <p class="dica">Gera um novo cálculo e zera as aprovações.</p>
+          <p class="dica">Gera um novo cálculo; depois é só aprovar de novo.</p>
         </section>
 
         <section class="card secao pilha">
-          ${calc ? `<a class="btn bloco" href="/api/orcamentos/${o.id}/pdf" target="_blank" rel="noopener">Ver PDF${todasAprovadas ? "" : " (prévia)"}</a>` : ""}
+          ${calc ? `<a class="btn bloco" href="/api/orcamentos/${o.id}/pdf" target="_blank" rel="noopener">Ver PDF${aprovado ? "" : " (prévia)"}</a>` : ""}
           <a class="btn bloco" href="${esc(o.linkPublico)}" target="_blank" rel="noopener">Página da cliente ↗</a>
         </section>
       </aside>
@@ -305,7 +299,7 @@ async function telaOrcamento(id) {
 
     <div class="acao-fixa">
       ${calc ? `<a class="btn" href="/api/orcamentos/${o.id}/pdf" target="_blank" rel="noopener">PDF</a>` : ""}
-      ${proxima ? `<button class="btn cheio" data-aprovar="${esc(proxima.etapa)}">Aprovar · ${esc(proxima.etapa)}</button>` : ""}
+      ${podeAprovar ? `<button class="btn cheio" data-aprovar>Aprovar e enviar</button>` : ""}
       ${o.status === "falha_envio" ? `<button class="btn cheio" data-reenviar>Reenviar</button>` : ""}
     </div>`;
 
@@ -378,8 +372,7 @@ function ligarAcoesDetalhe(o) {
   app.querySelectorAll("[data-aprovar]").forEach((b) =>
     b.addEventListener("click", () => {
       b.disabled = true;
-      executar(() => api(`/api/orcamentos/${o.id}/aprovar`, { method: "POST", body: { etapa: b.dataset.aprovar } }),
-        `${b.dataset.aprovar} aprovado.`);
+      executar(() => api(`/api/orcamentos/${o.id}/aprovar`, { method: "POST" }), "Aprovado! PDF enviado para o WhatsApp.");
     })
   );
 
@@ -420,7 +413,7 @@ function ligarAcoesDetalhe(o) {
     $("#salvar-edicao").addEventListener("click", () => {
       const corpo = { ...edicao };
       edicao = null;
-      executar(() => api(`/api/orcamentos/${o.id}/calculo`, { method: "PUT", body: corpo }), "Orçamento salvo. Aprovações reiniciadas.");
+      executar(() => api(`/api/orcamentos/${o.id}/calculo`, { method: "PUT", body: corpo }), "Orçamento salvo. Revise e aprove para enviar.");
     });
   }
 }
