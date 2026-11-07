@@ -19,6 +19,18 @@ npm run dev            # http://localhost:3000
 
 Sem configurar nada, o hub funciona em modo local: cálculo por regras, retorno ao WhatsApp simulado (aba **Saída WhatsApp**) e botão **+ Simular lead** para testar o fluxo.
 
+## Agente ADRI (pasta `agente/`)
+
+O agente de WhatsApp da Adriana é um projeto separado, em TypeScript, com `package.json`, testes e `.env` próprios. Documentação em [`agente/README.md`](agente/README.md) e [`agente/GUIA_INTEGRACAO_WHATSAPP.md`](agente/GUIA_INTEGRACAO_WHATSAPP.md).
+
+```bash
+cd agente
+npm install
+cp .env.example .env   # use PORT=3001 se o hub estiver na 3000
+npm start              # simulador em http://localhost:3001/simulator
+npm test
+```
+
 ## Telas
 
 - **Fila** — orçamentos que precisam de ação, **mais antigos primeiro**. Passou de `atrasoHoras` (config) aparece marcado como atrasado. Abas: Pendentes / Concluídos / Todos.
