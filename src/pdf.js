@@ -171,7 +171,9 @@ export function gerarPdf(orc, stream, { fotos: fotosMarca = { apresentacao: [], 
   // Itens: nome, conta e o que está incluso (da tabela da Dri)
   fio(y, CACAU);
   y += 12;
-  for (const it of calc.itens) {
+  // O deslocamento sai da lista de serviços e aparece nos totais.
+  const desl = calc.itens.find((i) => i.codigo === "DESL");
+  for (const it of calc.itens.filter((i) => i !== desl)) {
     const cat = catalogo.get(it.codigo) || {};
     const inclui = cat.inclui || [];
     const alturaPrevista = 40 + (cat.detalhe ? 14 : 0) + inclui.length * 13;
@@ -195,14 +197,19 @@ export function gerarPdf(orc, stream, { fotos: fotosMarca = { apresentacao: [], 
   }
 
   // Totais
-  y = garantir(y, 90);
+  y = garantir(y, desl ? 122 : 90);
   const tx = L + W * 0.5, tw = W * 0.5;
   const linhaTotal = (k, v) => {
     doc.font("Helvetica").fontSize(9.5).fillColor(AMEIXA).text(k, tx, y, { width: tw / 2 });
     doc.font("Helvetica").fontSize(9.5).fillColor(CACAU).text(v, tx + tw / 2, y, { width: tw / 2, align: "right" });
     y += 16;
   };
+  if (desl) {
+    linhaTotal("Serviços", brl(calc.subtotal - desl.total));
+    linhaTotal("Deslocamento (ida e volta)", brl(desl.total));
+  }
   if (calc.desconto > 0) {
+    if (desl) y += 2;
     linhaTotal("Subtotal", brl(calc.subtotal));
     linhaTotal(`Desconto (${calc.descontoPercentual}%)`, `− ${brl(calc.desconto)}`);
   }
