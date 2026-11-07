@@ -1,25 +1,28 @@
-// Página pública aberta pelos botões do PDF: a cliente aprova ou pede mudanças.
+// Página pública aberta pelo botão do PDF: a cliente aprova o orçamento.
+// Pedidos de ajuste não são feitos aqui — ficam na conversa do WhatsApp.
 import { config } from "./config.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function paginaCliente(orc, { decisao, enviado, erro } = {}) {
+export function paginaCliente(orc, { erro } = {}) {
   const cfg = config();
   const calc = orc.calculo;
-  const aguardando = orc.status === "enviado" || orc.status === "mudanca_cliente";
+  const disponivel = ["enviado", "mudanca_cliente", "aceito_cliente"].includes(orc.status);
   const pdf = `/p/${orc.tokenPublico}/orcamento.pdf`;
 
   let corpo;
-  if (enviado || orc.status === "aceito_cliente") {
-    const ok = orc.respostaCliente?.decisao === "aprovado";
+  if (orc.status === "aceito_cliente") {
     corpo = `
-      <p class="label">${ok ? "Orçamento aprovado" : "Pedido recebido"}</p>
-      <h2>${ok ? "Obrigada! Já avisamos a equipe." : "Recebemos seu pedido de mudança."}</h2>
-      <p>A conversa continua no WhatsApp — em breve você recebe o retorno por lá.</p>`;
-  } else if (!aguardando) {
-    corpo = `<p class="label">Status</p><h2>Este orçamento ainda não está disponível para resposta.</h2>`;
-  } else {
+      <p class="label">Orçamento aprovado</p>
+      <h2>Obrigada! Sua aprovação foi registrada.</h2>
+      <p>A conversa continua no WhatsApp — os próximos passos chegam por lá.</p>`;
+  } else if (orc.status === "mudanca_cliente") {
+    corpo = `
+      <p class="label">Em revisão</p>
+      <h2>Estamos ajustando seu orçamento.</h2>
+      <p>A versão atualizada chega pela conversa do WhatsApp.</p>`;
+  } else if (orc.status === "enviado") {
     corpo = `
       ${erro ? `<p class="erro">${esc(erro)}</p>` : ""}
       <p class="label">Próximo passo</p>
@@ -27,12 +30,9 @@ export function paginaCliente(orc, { decisao, enviado, erro } = {}) {
       <form method="post" action="/p/${orc.tokenPublico}/resposta" class="acoes">
         <button name="decisao" value="aprovado" class="btn cheio">Aprovar orçamento</button>
       </form>
-      <form method="post" action="/p/${orc.tokenPublico}/resposta" class="mudanca">
-        <input type="hidden" name="decisao" value="mudanca">
-        <label class="label" for="c">O que você gostaria de mudar?</label>
-        <textarea id="c" name="comentario" rows="4" ${decisao === "mudanca" ? "autofocus" : ""} required></textarea>
-        <button class="btn">Solicitar mudanças</button>
-      </form>`;
+      <p class="dica">Quer ajustar alguma coisa? É só responder na conversa do WhatsApp.</p>`;
+  } else {
+    corpo = `<p class="label">Status</p><h2>Este orçamento ainda não está disponível.</h2>`;
   }
 
   return `<!doctype html>
@@ -51,7 +51,7 @@ export function paginaCliente(orc, { decisao, enviado, erro } = {}) {
     <div><dt class="label">Evento</dt><dd>${esc([orc.evento?.data, orc.evento?.horario].filter(Boolean).join(" · ") || "A combinar")}</dd></div>
     <div><dt class="label">Validade</dt><dd>${calc.validadeDias} dias</dd></div>
   </dl>` : ""}
-  ${aguardando || orc.status === "aceito_cliente" ? `<a class="btn pequeno pdf" href="${pdf}" target="_blank" rel="noopener">Abrir PDF completo ↗</a>` : ""}
+  ${disponivel ? `<a class="btn pequeno pdf" href="${pdf}" target="_blank" rel="noopener">Abrir PDF completo ↗</a>` : ""}
   <section>${corpo}</section>
 </main>
 </body></html>`;

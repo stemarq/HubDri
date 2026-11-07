@@ -63,7 +63,7 @@ app.use("/fonts", express.static(path.resolve("public", "fonts")));
 app.get("/p/:token", (req, res) => {
   const orc = store.acharPorToken(req.params.token);
   if (!orc) return res.status(404).send("Orçamento não encontrado");
-  res.send(paginaCliente(orc, { decisao: req.query.d }));
+  res.send(paginaCliente(orc));
 });
 
 app.get("/p/:token/orcamento.pdf", (req, res) => {
@@ -76,11 +76,12 @@ app.get("/p/:token/orcamento.pdf", (req, res) => {
 app.post("/p/:token/resposta", async (req, res) => {
   const orc = store.acharPorToken(req.params.token);
   try {
-    await fluxo.registrarRespostaCliente(orc, req.body.decisao, req.body.comentario, "link");
-    res.send(paginaCliente(orc, { enviado: true }));
+    // O link só aprova; pedidos de ajuste são recusados aqui e devem ir pela conversa do WhatsApp.
+    await fluxo.registrarRespostaCliente(orc, req.body.decisao || "aprovado", "", "link");
+    res.send(paginaCliente(orc));
   } catch (e) {
     if (!orc) return res.status(404).send("Orçamento não encontrado");
-    res.status(e.status || 500).send(paginaCliente(orc, { erro: e.message, decisao: req.body.decisao }));
+    res.status(e.status || 500).send(paginaCliente(orc, { erro: e.message }));
   }
 });
 

@@ -253,10 +253,11 @@ export async function enviar(id) {
       evento: orc.evento,
       validadeDias: orc.calculo.validadeDias,
       pdfUrl: linkPdf(orc),
-      linkResposta: linkPublico(orc),
+      linkAprovacao: linkPublico(orc),
       mensagemSugerida:
         `Oi${primeiroNome ? " " + primeiroNome : ""}! Seu orçamento ${orc.codigo} está pronto. ` +
-        `Segue o PDF com todos os detalhes. Você pode aprovar ou pedir ajustes por aqui mesmo ou pelo link: ${linkPublico(orc)}`,
+        `Segue o PDF com todos os detalhes. Se estiver tudo certo, é só aprovar pelo botão do PDF. ` +
+        `Se quiser ajustar alguma coisa, me conta por aqui mesmo.`,
     });
     orc.status = "enviado";
     orc.envios.push({ em: agora(), ok: true, simulado: r.simulado });
@@ -278,6 +279,10 @@ export async function registrarRespostaCliente(orc, decisao, comentario, via) {
   if (!["enviado", "mudanca_cliente"].includes(orc.status))
     throw new ErroFluxo("Este orçamento não está aguardando resposta", 409);
   if (!["aprovado", "mudanca"].includes(decisao)) throw new ErroFluxo('decisao deve ser "aprovado" ou "mudanca"');
+  // Pedidos de mudança só chegam pela conversa do WhatsApp (via webhook), nunca pelo link.
+  if (decisao === "mudanca" && via === "link") throw new ErroFluxo("Para pedir ajustes, responda na conversa do WhatsApp");
+  // Em revisão, a versão antiga do PDF não pode mais ser aprovada pelo link.
+  if (via === "link" && orc.status !== "enviado") throw new ErroFluxo("Este orçamento está em revisão; a nova versão chega pelo WhatsApp", 409);
   if (decisao === "mudanca" && !comentario?.trim()) throw new ErroFluxo("Conte o que você gostaria de mudar");
 
   orc.respostaCliente = { decisao, comentario: comentario || "", em: agora(), via };

@@ -150,7 +150,7 @@ export function gerarPdf(orc, stream) {
   y = doc.y + 12;
 
   const link = linkPublico(orc);
-  const bw = (W - 12) / 2, bh = 38;
+  const bw = Math.min(W, 260), bh = 38;
   const botao = (txt, bx, url, cheio) => {
     if (cheio) doc.roundedRect(bx, y, bw, bh, bh / 2).fill(PRINCIPAL);
     else doc.roundedRect(bx, y, bw, bh, bh / 2).lineWidth(1).strokeColor(PRETO).stroke();
@@ -158,11 +158,11 @@ export function gerarPdf(orc, stream) {
       .text(txt, bx, y + 14, { width: bw, align: "center", characterSpacing: 1 });
     doc.link(bx, y, bw, bh, url);
   };
-  botao("APROVAR ORÇAMENTO", L, `${link}?d=aprovar`, true);
-  botao("SOLICITAR MUDANÇAS", L + bw + 12, `${link}?d=mudanca`, false);
+  botao("APROVAR ORÇAMENTO", L, link, true);
   y += bh + 12;
+  // Ajustes não têm link: são combinados na conversa do WhatsApp.
   doc.font("Helvetica").fontSize(9).fillColor(CINZA)
-    .text("Você também pode responder diretamente na conversa do WhatsApp.", L, y, { width: W });
+    .text("Quer ajustar alguma coisa? É só responder na conversa do WhatsApp.", L, y, { width: W });
   doc.font("Courier").fontSize(7.5).fillColor(CINZA).text(link, L, doc.y + 4, { width: W, link });
 
   // Rodapé (zera a margem inferior para o texto não abrir página nova)
