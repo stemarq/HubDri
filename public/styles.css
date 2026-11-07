@@ -118,7 +118,6 @@ h2 .label { font-size: 11px; }
 .aprov { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--border); }
 .aprov strong { font-weight: 500; }
 .ok { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--pill); background: var(--areia); color: var(--cacau); font-size: 13px; font-weight: 500; }
-.voce { display: grid; gap: 6px; margin-bottom: 12px; }
 .dica { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
 .pilha { display: grid; gap: 8px; }
 

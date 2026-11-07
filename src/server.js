@@ -158,13 +158,13 @@ app.get("/api/orcamentos/:id/pdf", rota((req, res) => {
 }));
 
 app.post("/api/orcamentos/:id/aprovar", rota(async (req, res) => {
-  res.json(await fluxo.aprovar(req.params.id, req.body.etapa, req.body.por));
+  res.json(await fluxo.aprovar(req.params.id, req.body.etapa));
 }));
 app.post("/api/orcamentos/:id/mudanca", rota((req, res) => {
-  res.json(fluxo.solicitarMudanca(req.params.id, req.body.comentario, req.body.por));
+  res.json(fluxo.solicitarMudanca(req.params.id, req.body.comentario));
 }));
 app.put("/api/orcamentos/:id/calculo", rota((req, res) => {
-  res.json(fluxo.editarCalculo(req.params.id, req.body, req.body.por));
+  res.json(fluxo.editarCalculo(req.params.id, req.body));
 }));
 app.post("/api/orcamentos/:id/reenviar", rota(async (req, res) => {
   res.json(await fluxo.enviar(req.params.id));

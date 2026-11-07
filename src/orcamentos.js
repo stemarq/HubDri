@@ -37,7 +37,7 @@ function historico(orc, evento, detalhe = "") {
 }
 
 function resetarAprovacoes(orc) {
-  orc.aprovacoes = config().etapasAprovacao.map((etapa) => ({ etapa, status: "pendente", por: null, em: null }));
+  orc.aprovacoes = config().etapasAprovacao.map((etapa) => ({ etapa, status: "pendente", em: null }));
 }
 
 // ---------- Entrada (webhook da IA do WhatsApp) ----------
@@ -177,32 +177,32 @@ function exigir(orc, ...status) {
   if (!status.includes(orc.status)) throw new ErroFluxo(`Ação indisponível no status "${STATUS[orc.status]}"`, 409);
 }
 
-export async function aprovar(id, etapa, por) {
+export async function aprovar(id, etapa) {
   const orc = store.acharOrcamento(id);
   exigir(orc, "aguardando_aprovacao");
   const ap = orc.aprovacoes.find((a) => a.etapa === etapa);
   if (!ap) throw new ErroFluxo("Etapa de aprovação inválida");
   if (ap.status === "aprovado") throw new ErroFluxo("Etapa já aprovada", 409);
-  Object.assign(ap, { status: "aprovado", por: por || "Equipe", em: agora() });
-  historico(orc, `Aprovado · ${etapa}`, ap.por);
+  Object.assign(ap, { status: "aprovado", em: agora() });
+  historico(orc, `Aprovado · ${etapa}`);
   salvar();
 
   if (orc.aprovacoes.every((a) => a.status === "aprovado")) await enviar(orc.id);
   return orc;
 }
 
-export function solicitarMudanca(id, comentario, por) {
+export function solicitarMudanca(id, comentario) {
   const orc = store.acharOrcamento(id);
   exigir(orc, "aguardando_aprovacao", "mudanca_cliente", "falha_envio");
   if (!comentario?.trim()) throw new ErroFluxo("Descreva a mudança desejada");
-  orc.revisoes.push({ comentario, por: por || "Equipe", em: agora(), origem: "equipe" });
-  historico(orc, "Mudança solicitada", `${por || "Equipe"}: ${comentario}`);
+  orc.revisoes.push({ comentario, em: agora(), origem: "hub" });
+  historico(orc, "Mudança solicitada", comentario);
   salvar();
   calcularEmSegundoPlano(orc.id, comentario);
   return orc;
 }
 
-export function editarCalculo(id, { itens, descontoPercentual }, por) {
+export function editarCalculo(id, { itens, descontoPercentual }) {
   const orc = store.acharOrcamento(id);
   exigir(orc, "aguardando_aprovacao", "mudanca_cliente", "falha_envio");
   const cfg = config();
@@ -227,7 +227,7 @@ export function editarCalculo(id, { itens, descontoPercentual }, por) {
   recalcularTotais(calc);
   resetarAprovacoes(orc);
   orc.status = "aguardando_aprovacao";
-  historico(orc, "Orçamento editado manualmente", `${por || "Equipe"} · total R$ ${calc.total.toFixed(2)}`);
+  historico(orc, "Orçamento editado manualmente", `total R$ ${calc.total.toFixed(2)}`);
   salvar();
   return orc;
 }
@@ -283,7 +283,7 @@ export async function registrarRespostaCliente(orc, decisao, comentario, via) {
 
   orc.respostaCliente = { decisao, comentario: comentario || "", em: agora(), via };
   orc.status = decisao === "aprovado" ? "aceito_cliente" : "mudanca_cliente";
-  if (decisao === "mudanca") orc.revisoes.push({ comentario, por: orc.cliente.nome || "Cliente", em: agora(), origem: "cliente" });
+  if (decisao === "mudanca") orc.revisoes.push({ comentario, em: agora(), origem: "cliente" });
   historico(orc, decisao === "aprovado" ? "Cliente aprovou o orçamento" : "Cliente pediu mudanças", comentario || via);
   salvar();
 

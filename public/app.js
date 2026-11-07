@@ -169,15 +169,11 @@ async function telaOrcamento(id) {
       <aside class="coluna lateral">
         <section class="card secao" id="card-aprov">
           ${calc ? `<div class="resumo-total"><span class="label">Total</span><b>${brl(calc.total)}</b></div>` : ""}
-          <h2>Aprovações internas</h2>
-          <div class="voce">
-            <label class="label" for="nome">Seu nome</label>
-            <input id="nome" value="${esc(lerNome())}" placeholder="Quem está aprovando" autocomplete="name">
-          </div>
+          <h2>Aprovações</h2>
           ${o.aprovacoes.map((a) => `
             <div class="aprov">
               <span><strong>${esc(a.etapa)}</strong><br>
-                <span class="label">${a.status === "aprovado" ? `${esc(a.por)} · ${dataHora(a.em)}` : "Pendente"}</span></span>
+                <span class="label">${a.status === "aprovado" ? dataHora(a.em) : "Pendente"}</span></span>
               ${a.status === "aprovado"
                 ? `<span class="ok">✓ Aprovado</span>`
                 : `<button class="btn cheio pequeno" data-aprovar="${esc(a.etapa)}" ${o.status !== "aguardando_aprovacao" || edicao ? "disabled" : ""}>Aprovar</button>`}
@@ -319,10 +315,6 @@ function blocoCalculo(o, podeAgir) {
 }
 
 function ligarAcoesDetalhe(o) {
-  const nomeEl = $("#nome");
-  nomeEl.addEventListener("change", () => gravarNome(nomeEl.value.trim()));
-  const por = () => nomeEl.value.trim() || "Equipe";
-
   const executar = async (fn, msg) => {
     try {
       await fn();
@@ -335,14 +327,8 @@ function ligarAcoesDetalhe(o) {
 
   app.querySelectorAll("[data-aprovar]").forEach((b) =>
     b.addEventListener("click", () => {
-      if (!nomeEl.value.trim()) {
-        nomeEl.scrollIntoView({ block: "center" });
-        nomeEl.focus();
-        return avisar("Informe seu nome para registrar a aprovação.");
-      }
-      gravarNome(nomeEl.value.trim());
       b.disabled = true;
-      executar(() => api(`/api/orcamentos/${o.id}/aprovar`, { method: "POST", body: { etapa: b.dataset.aprovar, por: por() } }),
+      executar(() => api(`/api/orcamentos/${o.id}/aprovar`, { method: "POST", body: { etapa: b.dataset.aprovar } }),
         `${b.dataset.aprovar} aprovado.`);
     })
   );
@@ -350,7 +336,7 @@ function ligarAcoesDetalhe(o) {
   $("#pedir-mudanca").addEventListener("click", () => {
     const comentario = $("#mudanca").value.trim();
     if (!comentario) return $("#mudanca").focus();
-    executar(() => api(`/api/orcamentos/${o.id}/mudanca`, { method: "POST", body: { comentario, por: por() } }),
+    executar(() => api(`/api/orcamentos/${o.id}/mudanca`, { method: "POST", body: { comentario } }),
       "Mudança registrada. Recalculando…");
   });
 
@@ -381,7 +367,7 @@ function ligarAcoesDetalhe(o) {
     });
     $("#desconto").addEventListener("change", (e) => { edicao.descontoPercentual = Number(e.target.value) || 0; render(); });
     $("#salvar-edicao").addEventListener("click", () => {
-      const corpo = { ...edicao, por: por() };
+      const corpo = { ...edicao };
       edicao = null;
       executar(() => api(`/api/orcamentos/${o.id}/calculo`, { method: "PUT", body: corpo }), "Orçamento salvo. Aprovações reiniciadas.");
     });
