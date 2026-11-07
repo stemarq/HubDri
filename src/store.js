@@ -22,6 +22,7 @@ export const DATA_DIR = SERVERLESS ? path.join(os.tmpdir(), "hubdri") : path.res
 export const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 const BUCKET = "imagens-orcamento";
+export const BUCKET_IMAGENS = BUCKET;
 
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 

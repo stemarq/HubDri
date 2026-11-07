@@ -19,20 +19,19 @@ const AREIA = "#EAD7C6";
 const CREME = "#F7F3EF";
 const NUDE = "#DDBBA8";
 
-// Logo fica no repositório; fotos de atendimento (com clientes) ficam fora dele, em data/marca/.
+// Logo fica no repositório; as fotos do trabalho (com clientes) vêm do Storage (ver marca.js).
 const LOGO = path.resolve("config", "marca", "logo.png");
-const PASTA_FOTOS = path.resolve("data", "marca");
 const existe = (f) => { try { return fs.statSync(f).isFile(); } catch { return false; } };
-const fotosDaMarca = () => {
-  try {
-    return fs.readdirSync(PASTA_FOTOS).filter((f) => /\.(jpe?g|png)$/i.test(f)).sort().map((f) => path.join(PASTA_FOTOS, f));
-  } catch { return []; }
+const LEGENDAS = {
+  "MAKE-EXPRESS": "Make express", "MAKE-VISAGISTA": "Make completa", "MAKE-INFANTIL": "Make infantil",
+  PENT: "Penteado", "PENT-CACHEADO": "Penteado para cachos",
 };
 
 // Respostas do briefing por palavra-chave (ex.: "Horário em que precisa estar pronta").
 const resposta = (orc, re) => orc.briefing?.respostas?.find((r) => re.test(r.pergunta))?.resposta;
 
-export function gerarPdf(orc, stream) {
+/** fotos: { apresentacao, portfolio } de fotosParaPdf() (marca.js). */
+export function gerarPdf(orc, stream, { fotos: fotosMarca = { apresentacao: [], portfolio: [] } } = {}) {
   const cfg = config();
   const emp = cfg.empresa;
   const ap = cfg.apresentacao || {};
@@ -90,7 +89,7 @@ export function gerarPdf(orc, stream) {
   }
 
   // Sobre o atendimento: texto à esquerda, fotos à direita
-  const fotos = fotosDaMarca().slice(0, 2);
+  const fotos = fotosMarca.apresentacao.slice(0, 2);
   const colTexto = fotos.length ? W * 0.56 : W;
   const yBloco = y;
   label("Sobre o atendimento", L, y);
@@ -119,7 +118,29 @@ export function gerarPdf(orc, stream) {
     y = Math.max(y, yBloco + fotos.length * (fh + 10));
   }
 
-  // ---------- Página 2: o orçamento ----------
+  // ---------- Página 2: portfólio (fotos dos serviços deste orçamento primeiro) ----------
+  const portfolio = fotosMarca.portfolio.slice(0, 6);
+  if (portfolio.length) {
+    y = novaPagina();
+    label("Portfólio", L, y);
+    titulo("Um pouco do meu trabalho", L, y + 14, 26);
+    y = doc.y + 6;
+    if (emp.instagram) {
+      doc.font("Helvetica").fontSize(9).fillColor(AMEIXA).text(`Mais trabalhos no Instagram ${emp.instagram}`, L, y);
+      y = doc.y + 16;
+    }
+    const cols = 3, gap = 10, fw = (W - gap * (cols - 1)) / cols;
+    const linhas = Math.ceil(portfolio.length / cols);
+    const fh = Math.min(fw * 4 / 3, (LIMITE - y - linhas * 18) / linhas);
+    portfolio.forEach((f, i) => {
+      const x = L + (i % cols) * (fw + gap), yy = y + Math.floor(i / cols) * (fh + 18 + gap);
+      foto(f, x, yy, fw, fh, 12);
+      const grupo = path.basename(f).split("--")[0];
+      if (LEGENDAS[grupo]) doc.font("Helvetica").fontSize(7.5).fillColor(AMEIXA).text(LEGENDAS[grupo], x, yy + fh + 4, { width: fw, align: "center", characterSpacing: 0.5 });
+    });
+  }
+
+  // ---------- Página seguinte: o orçamento ----------
   y = novaPagina();
   label(`Orçamento ${orc.codigo}`, L, y);
   titulo("Seu investimento", L, y + 14, 26);
@@ -207,10 +228,16 @@ export function gerarPdf(orc, stream) {
     y += tam + 22;
   }
 
-  // Condições
-  const condicoes = [ap.pagamento, ap.domicilio && `Atendimento a domicílio: ${ap.domicilio}`, emp.rodapePdf].filter(Boolean);
+  // Avisos e condições (os mesmos da tabela da Dri), conforme o local do atendimento
+  const noStudio = calc.local !== "domicilio";
+  const condicoes = [
+    noStudio && ap.studio && `Atendimento no studio: ${ap.studio}.${ap.horarioStudio ? ` ${ap.horarioStudio}` : ""}`,
+    !noStudio && ap.domicilio && `Atendimento a domicílio: ${ap.domicilio}`,
+    ap.pagamento,
+    emp.rodapePdf,
+  ].filter(Boolean);
   y = garantir(y, 40 + condicoes.length * 30);
-  label("Condições", L, y);
+  label("Avisos e condições", L, y);
   y += 15;
   for (const c of condicoes) {
     doc.circle(L + 3, y + 4.5, 1.6).fill(ROSE);

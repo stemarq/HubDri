@@ -6,6 +6,7 @@ import { config, env } from "./config.js";
 import * as fluxo from "./orcamentos.js";
 import { STATUS, PENDENTES, ErroFluxo } from "./orcamentos.js";
 import { gerarPdf } from "./pdf.js";
+import { fotosParaPdf } from "./marca.js";
 import { iaDisponivel, iaNome, situacaoIa } from "./ia.js";
 import { leadExemplo } from "./simulador.js";
 import { paginaCliente } from "./pagina-cliente.js";
@@ -103,11 +104,14 @@ app.get("/p/:token/orcamento.pdf", async (req, res) => {
   await enviarPdf(orc, res);
 });
 
-// O PDF usa as imagens do chat: garante que estejam no cache local antes de gerar.
+// O PDF usa as imagens do chat e as fotos do trabalho da Dri: garante que estejam no cache local antes de gerar.
 async function enviarPdf(orc, res) {
-  await Promise.allSettled(orc.imagens.map((i) => store.garantirArquivo(i.arquivo)));
+  const [, fotos] = await Promise.all([
+    Promise.allSettled(orc.imagens.map((i) => store.garantirArquivo(i.arquivo))),
+    fotosParaPdf(orc),
+  ]);
   res.type("pdf").set("Content-Disposition", `inline; filename="${orc.codigo}.pdf"`);
-  gerarPdf(orc, res);
+  gerarPdf(orc, res, { fotos });
 }
 
 app.post("/p/:token/resposta", async (req, res) => {
