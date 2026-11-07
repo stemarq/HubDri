@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import * as store from "./store.js";
 import { agora, novoId, salvar, notificar } from "./store.js";
 import { config, env } from "./config.js";
-import { montarCalculo, propostaPorRegras, recalcularTotais, localDoAtendimento, precoNoLocal, LOCAIS, PREFIXO_SEM_DOMICILIO, avisoSemDomicilio } from "./calculo.js";
+import { montarCalculo, propostaPorRegras, recalcularTotais, localDoAtendimento, precoNoLocal, LOCAIS, PREFIXO_SEM_DOMICILIO, avisoSemDomicilio, aplicarDeslocamento, CODIGO_DESLOCAMENTO } from "./calculo.js";
 import { iaDisponivel, iaNome, proporOrcamento } from "./ia.js";
 import { enviarParaWhatsapp } from "./whatsapp.js";
 
@@ -103,6 +103,10 @@ export async function receberLead(payload) {
 
   orc.cliente = { ...orc.cliente, ...c };
   orc.evento = { ...(orc.evento || {}), ...(payload.evento || {}) };
+  // Estimativa de deslocamento da ADRI (rota da saída da Adriana até o local, ida e volta).
+  const desl = payload.deslocamento;
+  if (desl && Number(desl.valor) > 0)
+    orc.evento.deslocamento = { valor: Number(desl.valor), km: Number(desl.km) || null, confianca: desl.confianca || null, simulado: Boolean(desl.simulado) };
   if (payload.briefing?.resumo) orc.briefing.resumo = payload.briefing.resumo;
   orc.briefing.respostas.push(...(payload.briefing?.respostas || []));
   orc.conversa.push(...(payload.conversa || payload.mensagens || []).map((m) => ({ de: m.de, texto: m.texto, em: m.em || agora() })));
@@ -166,6 +170,8 @@ export async function calcular(id, pedidoDeMudanca = null) {
   const anterior = orc.calculo;
   const onde = anterior?.localManual ? { local: anterior.local, informado: true } : localDoAtendimento(orc);
   orc.calculo = montarCalculo(proposta, cfg, geradoPor, onde);
+  aplicarDeslocamento(orc.calculo, orc);
+  recalcularTotais(orc.calculo);
   if (anterior?.localManual) orc.calculo.localManual = true;
   if (geradoPor === "ia") orc.calculo.ia = nomeIa;
   if (!orc.briefing.resumo && proposta.resumo) orc.briefing.resumo = proposta.resumo;
@@ -222,9 +228,13 @@ export function editarCalculo(id, { itens, descontoPercentual }, autor = null) {
   const cfg = config();
   const porCodigo = new Map(cfg.catalogo.map((c) => [c.codigo, c]));
   const calc = orc.calculo;
+  // O deslocamento não é do catálogo: mantém o item, com o valor que a Adriana deixar.
+  const desl = calc.itens.find((i) => i.codigo === CODIGO_DESLOCAMENTO);
   calc.itens = (itens || [])
-    .filter((i) => porCodigo.has(i.codigo) && Number(i.quantidade) > 0)
+    .filter((i) => (porCodigo.has(i.codigo) || (desl && i.codigo === CODIGO_DESLOCAMENTO)) && Number(i.quantidade) > 0)
     .map((i) => {
+      if (i.codigo === CODIGO_DESLOCAMENTO)
+        return { ...desl, quantidade: Number(i.quantidade), valorUnitario: Number(i.valorUnitario ?? desl.valorUnitario) };
       const cat = porCodigo.get(i.codigo);
       return {
         codigo: cat.codigo,
@@ -256,13 +266,14 @@ export function trocarLocal(id, local, autor = null) {
   const semDomicilio = [];
   calc.itens = calc.itens.map((i) => {
     const cat = porCodigo.get(i.codigo);
-    if (!cat) return i; // item que saiu do catálogo: mantém o valor que já tinha
+    if (!cat) return i; // item que saiu do catálogo (ou deslocamento): mantém o valor que já tinha
     if (local === "domicilio" && cat.valorDomicilio == null) semDomicilio.push(cat.descricao);
     return { ...i, valorUnitario: precoNoLocal(cat, local) };
   });
   calc.local = local;
   calc.localManual = true;
   calc.pontosDeAtencao = (calc.pontosDeAtencao || []).filter((p) => !p.startsWith(PREFIXO_SEM_DOMICILIO) && !p.startsWith("Local do atendimento não informado"));
+  aplicarDeslocamento(calc, orc); // domicílio põe o deslocamento; studio tira
   if (semDomicilio.length) calc.pontosDeAtencao.push(avisoSemDomicilio(semDomicilio));
   recalcularTotais(calc);
   limparAprovacao(orc);

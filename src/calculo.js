@@ -6,6 +6,45 @@ const arred = (n) => Math.round(n * 100) / 100;
 
 export const LOCAIS = { studio: "No studio", domicilio: "A domicílio" };
 
+// ---------- Deslocamento (atendimento a domicílio) ----------
+// O valor vem da ADRI, que calcula a rota da saída da Adriana até o local (ida e volta).
+// Não está no catálogo: o hub acrescenta como item próprio, só a domicílio.
+export const CODIGO_DESLOCAMENTO = "DESL";
+export const PREFIXO_SEM_DESLOCAMENTO = "Deslocamento não calculado";
+
+/** Estimativa de deslocamento do orçamento: o campo enviado pela ADRI ou, em leads antigos, a linha do briefing. */
+export function deslocamentoDoOrcamento(orc) {
+  const d = orc.evento?.deslocamento;
+  if (d && Number(d.valor) > 0) return { valor: arred(Number(d.valor)), km: Number(d.km) || null };
+  const r = (orc.briefing?.respostas || []).find((x) => /deslocamento estimado/i.test(x.pergunta));
+  const m = r?.resposta?.match(/R\$\s*([\d.]+(?:,\d+)?)/);
+  if (!m) return null;
+  const valor = Number(m[1].includes(",") ? m[1].replace(/\./g, "").replace(",", ".") : m[1]);
+  const km = Number((orc.briefing.respostas.find((x) => /dist[aâ]ncia/i.test(x.pergunta))?.resposta || "").match(/([\d.,]+)\s*km/)?.[1]?.replace(",", ".")) || null;
+  return valor > 0 ? { valor: arred(valor), km } : null;
+}
+
+export const itemDeslocamento = (d) => ({
+  codigo: CODIGO_DESLOCAMENTO,
+  descricao: "Deslocamento (ida e volta)",
+  unidade: "un",
+  quantidade: 1,
+  valorUnitario: d.valor,
+  total: d.valor,
+  observacao: `${d.km ? `~${d.km} km até o local · ` : ""}estimativa de corrida por aplicativo`,
+});
+
+/** Põe ou tira o item de deslocamento conforme o local. Sem estimativa a domicílio, deixa um aviso. */
+export function aplicarDeslocamento(calc, orc) {
+  calc.itens = calc.itens.filter((i) => i.codigo !== CODIGO_DESLOCAMENTO);
+  calc.pontosDeAtencao = (calc.pontosDeAtencao || []).filter((p) => !p.startsWith(PREFIXO_SEM_DESLOCAMENTO));
+  if (calc.local !== "domicilio") return calc;
+  const d = deslocamentoDoOrcamento(orc);
+  if (d) calc.itens.push(itemDeslocamento(d));
+  else calc.pontosDeAtencao.push(`${PREFIXO_SEM_DESLOCAMENTO}: a ADRI não conseguiu a rota (confira o endereço de saída da Adriana em Configurações). Combine o valor à parte ou edite o orçamento.`);
+  return calc;
+}
+
 // Tudo o que a cliente contou, num texto só (minúsculo), para as regras.
 function textoDoPedido(orc) {
   return [
@@ -120,7 +159,7 @@ export function propostaPorRegras(orc) {
   if (extras == null && maisN == null && !principal) pontos.push("Número de pessoas não informado: considerada 1 pessoa.");
   if (penteado && outras > 0) pontos.push("Penteado incluído só para a protagonista: confirme se as outras pessoas também querem.");
   if (cilios) pontos.push("Cílios considerados para 1 pessoa: confirme quantas querem.");
-  if (/\bkm\b|desloc|perman[eê]ncia|retoque/.test(texto)) pontos.push("Deslocamento e permanência não estão na tabela de preços: combine à parte, se for o caso.");
+  if (/perman[eê]ncia|retoque/.test(texto)) pontos.push("Permanência e retoques no evento não estão na tabela de preços: combine à parte, se for o caso.");
 
   return {
     itens,
