@@ -411,7 +411,7 @@ async function telaOrcamento(id) {
         </section>
 
         <section class="card secao" style="order:8">
-          <h2>Conversa no WhatsApp</h2>
+          <h2>Conversa com a cliente</h2>
           <div class="conversa">${o.conversa.map((m) => `
             <div class="msg ${m.de === "cliente" ? "cliente" : ""}">
               <span class="label">${m.de === "cliente" ? "Cliente" : "IA"} · ${dataHora(m.em)}</span>${esc(m.texto)}
@@ -558,13 +558,13 @@ function ligarAcoesDetalhe(o) {
       const ok = await confirmar({
         titulo: "Aprovar e enviar?",
         texto: `<p><strong>${esc(o.codigo)} · ${cliente}</strong><br>Total de <strong>${brl(o.calculo.total)}</strong></p>
-                <p class="muted">O PDF vai para a IA do WhatsApp enviar à cliente. Depois disso o envio não pode ser desfeito.</p>`,
+                <p class="muted">O PDF vai para a ADRI enviar à cliente pelo chat (Telegram ou WhatsApp). Depois disso o envio não pode ser desfeito.</p>`,
         ok: "Aprovar e enviar",
       });
       if (!ok) return;
       const r = await executar(b, "Aprovando…", () => api(`/api/orcamentos/${o.id}/aprovar`, { method: "POST" }), "Não foi possível aprovar");
-      if (r?.status === "falha_envio") avisar(falhaEnvio(r), "erro", "Aprovado, mas o envio ao WhatsApp falhou");
-      else if (r) avisar("O PDF foi para a IA do WhatsApp enviar à cliente.", "sucesso", `${o.codigo} aprovado`);
+      if (r?.status === "falha_envio") avisar(falhaEnvio(r), "erro", "Aprovado, mas o envio à cliente falhou");
+      else if (r) avisar("O PDF foi para a ADRI enviar à cliente pelo chat.", "sucesso", `${o.codigo} aprovado`);
     })
   );
 
@@ -572,7 +572,7 @@ function ligarAcoesDetalhe(o) {
     b.addEventListener("click", async () => {
       const r = await executar(b, "Enviando…", () => api(`/api/orcamentos/${o.id}/reenviar`, { method: "POST" }), "Não foi possível reenviar");
       if (r?.status === "falha_envio") avisar(falhaEnvio(r), "erro", "O envio falhou de novo");
-      else if (r) avisar("O PDF foi para a IA do WhatsApp.", "sucesso", "Reenviado");
+      else if (r) avisar("O PDF foi para a ADRI.", "sucesso", "Reenviado");
     })
   );
 
@@ -698,25 +698,6 @@ document.addEventListener("click", async (e) => {
 });
 window.addEventListener("beforeunload", (e) => { if (edicaoAlterada()) e.preventDefault(); });
 
-// ---------- Saída WhatsApp ----------
-
-async function telaSaida() {
-  const itens = await api("/api/saida-whatsapp");
-  app.innerHTML = `
-    <div class="titulo">
-      <span class="label">${meta.whatsappSimulado ? "Modo simulado · configure WHATSAPP_CALLBACK_URL" : "Retornos simulados"}</span>
-      <h1>Saída WhatsApp</h1>
-    </div>
-    <div class="saida">
-      ${itens.length ? itens.map((s) => `
-        <article class="card">
-          <span class="label">${dataHora(s.enviadoEm)} · ${esc(s.evento)} · ${esc(s.codigo)}</span>
-          ${s.mensagemSugerida ? `<p style="margin:8px 0 0">${esc(s.mensagemSugerida)}</p>` : ""}
-          ${s.pdfUrl ? `<p style="margin:12px 0 0"><a class="btn pequeno" href="${esc(s.pdfUrl)}" target="_blank" rel="noopener">Abrir PDF enviado</a></p>` : ""}
-        </article>`).join("") : `<div class="vazio-grande"><span class="label">Vazio</span><p>Nada foi devolvido ao WhatsApp ainda.</p></div>`}
-    </div>`;
-}
-
 // ---------- Roteamento e atualização ----------
 
 let atualOrc = null;
@@ -726,7 +707,6 @@ async function render({ carregando = false } = {}) {
   if (carregando) app.innerHTML = esqueleto(tela);
   try {
     if (tela === "orcamento") atualOrc = await telaOrcamento(param);
-    else if (tela === "saida") { atualOrc = null; await telaSaida(); }
     else if (tela === "conversas") { atualOrc = null; await telaConversas(param); }
     else if (tela === "preco") { atualOrc = null; telaPreco(); }
     else if (tela === "configuracoes") { atualOrc = null; await telaConfiguracoes(); }

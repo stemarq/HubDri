@@ -28,7 +28,7 @@ export async function telaConfiguracoes() {
     <section class="card secao pilha" id="integracoes">
       <h2 style="margin:0;font-size:18px">Integrações</h2>
       <p class="dica">O que está realmente conectado agora. Nada aqui é simulado em produção: o que falta aparece em vermelho.</p>
-      <ul style="list-style:none;margin:0;padding:0;display:grid;gap:10px">${integ.itens.map((i) => `<li style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:baseline"><span class="chip" style="color:${COR[i.status]};border-color:${COR[i.status]}">${ROT[i.status]}</span><span><strong>${esc(i.nome)}</strong><br><span class="muted">${esc(i.detalhe)}</span></span></li>`).join("")}</ul>
+      <ul style="list-style:none;margin:0;padding:0;display:grid;gap:10px">${integ.itens.map((i) => `<li style="display:grid;grid-template-columns:minmax(0,1fr);gap:4px;justify-items:start"><span class="chip" style="color:${COR[i.status]};border-color:${COR[i.status]}">${ROT[i.status]}</span><span style="min-width:0;max-width:100%;overflow-wrap:anywhere"><strong>${esc(i.nome)}</strong><br><span class="muted">${esc(i.detalhe)}</span></span></li>`).join("")}</ul>
     </section>
 
     <form class="card secao pilha" id="f-hub">

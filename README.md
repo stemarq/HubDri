@@ -31,6 +31,12 @@ npm start              # simulador em http://localhost:3001/simulator
 npm test
 ```
 
+## Conversas vazias? É esperado
+
+Quem recebe o projeto com os `.env` vazios (`npm run env:novo`) vê a aba **Conversas** em "Sem conversas". As conversas ficam no banco do agente ADRI, que é local e não vai para o Git. Elas só aparecem depois que o Telegram ou o WhatsApp estiverem conectados e alguém escrever para a ADRI. É nos `.env` que ficam os tokens da API (bot do Telegram, chaves da Meta, senhas entre hub e agente).
+
+Passo a passo para conectar, primeiro o Telegram e depois o WhatsApp oficial: [`GUIA_CONVERSAS.md`](GUIA_CONVERSAS.md).
+
 ## Telas
 
 - **Fila** — orçamentos que precisam de ação, **mais antigos primeiro**. Passou de `atrasoHoras` (config) aparece marcado como atrasado. Abas: Pendentes / Concluídos / Todos.
