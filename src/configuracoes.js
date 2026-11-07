@@ -45,12 +45,20 @@ const numero = (v, nome, { min = 0, max = 1e9 } = {}) => {
 
 /** Valida e grava as edições do hub. O arquivo base (config/hub.config.json) não é alterado. */
 function salvarHub(b) {
-  const catalogo = (b.catalogo || []).map((c, i) => ({
-    codigo: texto(c.codigo, `Código do item ${i + 1}`, { max: 30, obrigatorio: true }).toUpperCase().replace(/[^A-Z0-9_-]/g, "-"),
-    descricao: texto(c.descricao, `Descrição do item ${i + 1}`, { max: 120, obrigatorio: true }),
-    unidade: texto(c.unidade, `Unidade do item ${i + 1}`, { max: 20, obrigatorio: true }),
-    valor: numero(c.valor, `Valor do item ${i + 1}`, { max: 1e6 }),
-  }));
+  // "Detalhe" e "o que está incluso" (usados no PDF) não aparecem na tela: seguem o item de mesmo código.
+  const atuais = new Map(config().catalogo.map((c) => [c.codigo, c]));
+  const catalogo = (b.catalogo || []).map((c, i) => {
+    const codigo = texto(c.codigo, `Código do item ${i + 1}`, { max: 30, obrigatorio: true }).toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
+    const { detalhe, inclui } = atuais.get(codigo) || {};
+    return {
+      codigo,
+      descricao: texto(c.descricao, `Descrição do item ${i + 1}`, { max: 120, obrigatorio: true }),
+      unidade: texto(c.unidade, `Unidade do item ${i + 1}`, { max: 20, obrigatorio: true }),
+      valor: numero(c.valor, `Valor do item ${i + 1}`, { max: 1e6 }),
+      ...(detalhe && { detalhe }),
+      ...(inclui && { inclui }),
+    };
+  });
   if (!catalogo.length) throw new ErroConfig("O catálogo precisa ter ao menos um item");
   if (new Set(catalogo.map((c) => c.codigo)).size !== catalogo.length) throw new ErroConfig("Há códigos repetidos no catálogo");
   const novo = {
