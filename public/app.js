@@ -360,7 +360,7 @@ function blocoCalculo(o, podeAgir) {
   const total = subtotal - subtotal * (desc || 0) / 100;
 
   return `
-    <p class="label" style="margin:-6px 0 14px">${c.geradoPor === "ia" ? "Gerado pela IA" : "Gerado por regras"} · ${dataHora(c.geradoEm)}${c.editadoManualmente ? " · editado" : ""}</p>
+    <p class="label" style="margin:-6px 0 14px">${c.geradoPor === "ia" ? `Gerado pela IA${c.ia ? ` (${esc(c.ia)})` : ""}` : "Gerado por regras"} · ${dataHora(c.geradoEm)}${c.editadoManualmente ? " · editado" : ""}</p>
     <ul class="itens">${linhas || `<li class="muted">Nenhum item.</li>`}</ul>
     ${editando ? `
       <div class="barra-edicao">
