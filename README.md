@@ -6,7 +6,7 @@ Hub de captação de clientes. A IA do WhatsApp coleta os dados da cliente e env
 WhatsApp (IA) ──lead──▶ Hub ──▶ cálculo (IA/regras) ──▶ aprovação (botão único)
       ▲                                                          │
       └────────── PDF + mensagem sugerida ◀──────────────────────┘
-cliente aprova (botão do PDF ou no chat) ou pede ajustes (só no chat) ──▶ Hub notifica
+cliente aprova (link enviado no chat ou respondendo "aceito") ou pede ajustes (só no chat) ──▶ Hub notifica
 ```
 
 ## Rodando
@@ -36,7 +36,7 @@ npm test
 - **Fila** — orçamentos que precisam de ação, **mais antigos primeiro**. Passou de `atrasoHoras` (config) aparece marcado como atrasado. Abas: Pendentes / Concluídos / Todos.
 - **Orçamento** — dados da cliente, cálculo (editável), briefing, imagens do chat, conversa, botão **Aprovar e enviar**, pedido de mudança, PDF e histórico.
 - **Notificações** — novo lead, novas informações no chat, resposta da cliente, falha de envio. O hub atualiza a cada 6 s.
-- **Página da cliente** (`/p/:token`) — aberta pelo botão *Aprovar orçamento* do PDF. Não há link para pedir alterações: ajustes são combinados na conversa do WhatsApp.
+- **Página da cliente** (`/p/:token`) — aberta pelo link de aprovação que vai na conversa junto com o PDF (o PDF não tem botão). Não há link para pedir alterações: ajustes são combinados na conversa do WhatsApp.
 
 ## Status do orçamento
 
@@ -78,7 +78,7 @@ O hub faz `POST` (header `x-hub-token: $WHATSAPP_CALLBACK_TOKEN`) com:
 }
 ```
 
-O retorno **não** traz link para a cliente pedir alterações — só `linkAprovacao`. Quando ela aprova pelo botão do PDF, o hub envia `{"evento": "resposta_cliente", "decisao": "aprovado", …}` para a mesma URL.
+O retorno **não** traz link para a cliente pedir alterações — só `linkAprovacao`. Quando ela aprova por esse link, o hub envia `{"evento": "resposta_cliente", "decisao": "aprovado", …}` para a mesma URL.
 
 ### 3. Repassar a resposta dada no chat — `POST /api/webhooks/whatsapp/resposta`
 
@@ -108,6 +108,19 @@ Com `GEMINI_API_KEY` (Gemini, modelo `gemini-3.6-flash`, trocável em `GEMINI_MO
 ## Visual
 
 Mobile-first, tema claro, elementos arredondados e sem animações. Paleta nude/rosé (`#EAD7C6` `#DDBBA8` `#F7F3EF` `#A98C7A` `#C87D76` `#B66A5C` `#7B4B4F` `#3A2A23`), definida em `public/tokens.css` e reaproveitada no PDF. Tipografia inspirada em patternbreak.ing: grotesca + IBM Plex Mono nos rótulos. O site usa Neue Montreal (fonte comercial); o hub usa Inter Tight no lugar. Se tiver a licença, coloque `NeueMontreal-Regular/Medium/Bold.woff2` em `public/fonts/` e ela passa a ser usada automaticamente.
+
+### PDF do orçamento
+
+Segue o material de apresentação da Dri Gianetti:
+- **Página 1:** logo, nome da cliente, a frase da marca, "Nosso diferencial", atendimento no studio e a domicílio, e fotos.
+- **Página 2 em diante:** os itens com o "o que está incluso" de cada serviço, o total, as referências enviadas pela cliente e as condições (50% de entrada, formas de pagamento, deslocamento).
+- **Rodapé:** e-mail, telefone e Instagram.
+- **Sem botão de aprovação:** a cliente confirma pelo link enviado no chat ou respondendo na conversa.
+
+Onde ficam os textos e as imagens:
+- Textos: `config/hub.config.json`, em `empresa`, `apresentacao` e nos campos `detalhe`/`inclui` de cada item do catálogo.
+- Logo: `config/marca/logo.png`.
+- **Fotos de atendimento:** ficam em `data/marca/` (qualquer `.jpg`/`.png`, as duas primeiras em ordem alfabética), **fora do Git**, porque mostram clientes e o repositório é público. Sem fotos, a página 1 sai só com o texto.
 
 ## Banco de dados (Supabase)
 
@@ -188,7 +201,7 @@ O agente (pasta `agente/`) é a "IA do WhatsApp" deste hub. Fluxo:
 1. A cliente conversa com a ADRI (Telegram hoje, WhatsApp oficial depois). Quando todos os dados estão confirmados, o agente envia o lead para `POST /api/webhooks/whatsapp/lead` (agenda, horários, deslocamento estimado e conversa vão no briefing).
 2. O hub calcula, gera o PDF e a Adriana aprova no app (**Fila**).
 3. O hub chama `WHATSAPP_CALLBACK_URL` (`http://localhost:3001/api/hub/callback`): o agente baixa o PDF do hub e entrega para a cliente no chat, com o link de aprovação.
-4. A cliente aprova pelo botão do PDF (ou escrevendo "aceito"): o agente **reserva o horário no Google Agenda** e confirma no chat. Pedidos de mudança escritos no chat voltam ao hub como `mudanca`.
+4. A cliente aprova pelo link enviado no chat (ou escrevendo "aceito"): o agente **reserva o horário no Google Agenda** e confirma no chat. Pedidos de mudança escritos no chat voltam ao hub como `mudanca`.
 5. A aba **Conversas** mostra todos os chats, com o histórico completo. A Adriana pode **assumir** a conversa (a ADRI fica em silêncio), escrever para a cliente e **devolver** à ADRI. Escrever já assume a conversa.
 
 Variáveis: `AGENTE_URL`/`AGENTE_TOKEN` no `.env` do hub; `HUB_URL`/`HUB_WEBHOOK_TOKEN`/`HUB_CALLBACK_TOKEN` no `agente/.env` (modelos nos `.env.example`). Google Agenda: `agente/GUIA_GOOGLE_AGENDA.md`.

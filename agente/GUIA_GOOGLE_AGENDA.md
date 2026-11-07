@@ -42,4 +42,4 @@ GOOGLE_CALENDAR_ID=primary      # ou o id da agenda impresso no terminal
 - **Consulta:** antes de montar o orçamento, vê os eventos do dia (com bloco de saída, trajeto, atendimento e retorno, mais a margem entre compromissos). Eventos de dia inteiro e marcados como "livre" são ignorados.
 - **Conflito:** se houver choque, oferece horários e dias alternativos em vez de inventar.
 - **Agenda inacessível:** se o Google falhar, ela não afirma que está livre: o orçamento vai para revisão com o motivo `CALENDAR_UNVERIFIED`.
-- **Criação do evento:** só quando a cliente aprova a proposta (botão do PDF ou aceite no chat). O evento ocupa do horário de saída ao retorno e leva o endereço no campo local. Uma trava impede duas reservas no mesmo horário.
+- **Criação do evento:** só quando a cliente aprova a proposta (link de aprovação ou aceite no chat). O evento ocupa do horário de saída ao retorno e leva o endereço no campo local. Uma trava impede duas reservas no mesmo horário.
