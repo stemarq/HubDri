@@ -60,8 +60,10 @@ export function propostaPorRegras(orc) {
   const noiva = /noiva|casamento|casar|casando/.test(texto);
   const extras = num(/(\d+)\s*(?:pessoas|madrinhas|convidadas|maquiagens|amigas|mulheres)/);
   const km = num(/(\d+(?:[.,]\d+)?)\s*km/);
-  const hora = num(/\b(?:às|as|a partir das)?\s*([0-6])\s*(?:h|horas?)\b(?!\s*de perman)/);
-  const permanencia = num(/(\d+)\s*h(?:oras?)?\s*de perman/);
+  // Início do atendimento: "às 6h", "às 5:30", "começando 6h" — ignora durações como "3 horas".
+  const mHora = texto.match(/(?:às|as|a partir das|come[cç]ando)\s+([0-6])(?:h|:\d\d)?(?![\d:])|(?<![\d:])([0-6])h(?![a-z])/);
+  const hora = mHora ? Number(mHora[1] ?? mHora[2]) : null;
+  const permanencia = num(/(\d+)\s*h(?:oras?)?\s*de perman/) ?? num(/perman[eê]ncia:?\s*(\d+)/);
   const penteado = /penteado|cabelo/.test(texto);
   const cilios = /c[ií]lios/.test(texto);
 
