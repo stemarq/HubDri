@@ -144,7 +144,8 @@ export function quoteView(ctx: Ctx, id: string, withConversation = false) {
     id: q.id, number: q.number, status: q.status, conversationId: q.conversation_id,
     customer: cust ? { id: cust.id, name: cust.name, waId: cust.wa_id } : null,
     service: { code: q.service_code, name: svc?.name }, event: parse(q.event, {}), schedule: parse(q.schedule, {}), availability: parse(q.availability, {}),
-    items: all(ctx.db, 'SELECT kind,label,amount_cents FROM quote_items WHERE quote_id=? ORDER BY position', id).map((r) => ({ kind: r.kind, label: r.label, amountCents: r.amount_cents })),
+    items: all(ctx.db, 'SELECT kind,label,amount_cents FROM quote_items WHERE quote_id=? ORDER BY position', id).map((r) => ({ kind: r.kind, label: r.label, amountCents: r.amount_cents,
+      basis: r.kind === 'TRANSPORT' ? 'ESTIMATE' : r.kind === 'OTHER' ? 'MANUAL' : 'RULE' })), // ESTIMATE = estimado; RULE/MANUAL = regra cadastrada ou valor definido pela Adriana
     totalCents: q.total_cents, reviewReasons: parse(q.review_reasons, []), notes: q.notes, validUntil: q.valid_until,
     pdfAvailable: !!q.pdf_path, transport: all(ctx.db, 'SELECT id,leg,origin,destination,distance_m,duration_s,predicted_cents,confidence,source,simulated FROM transportation_estimates WHERE quote_id=?', id)
       .map((r) => ({ id: r.id, leg: r.leg, origin: r.origin, destination: r.destination, distanceM: r.distance_m, durationS: r.duration_s, predictedCents: r.predicted_cents, confidence: r.confidence, source: r.source, simulated: !!r.simulated })),
@@ -153,6 +154,9 @@ export function quoteView(ctx: Ctx, id: string, withConversation = false) {
     history: all(ctx.db, 'SELECT action,actor,before,after,created_at FROM approval_history WHERE quote_id=? ORDER BY created_at', id)
       .map((r) => ({ action: r.action, actor: r.actor, before: parse(r.before, null), after: parse(r.after, null), at: r.created_at })),
   };
+  const items = view.items as { amountCents: number; basis: string }[];
+  view.estimatedCents = items.filter((i) => i.basis === 'ESTIMATE').reduce((s, i) => s + i.amountCents, 0);
+  view.confirmedCents = items.filter((i) => i.basis !== 'ESTIMATE').reduce((s, i) => s + i.amountCents, 0);
   if (withConversation) view.messages = all(ctx.db, 'SELECT direction,type,body,author,status,created_at FROM messages WHERE conversation_id=? ORDER BY created_at', q.conversation_id)
     .map((m) => ({ direction: m.direction, type: m.type, body: m.body, author: m.author, status: m.status, at: m.created_at }));
   return view;

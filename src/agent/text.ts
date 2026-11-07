@@ -15,16 +15,18 @@ const SLANG: [RegExp, string][] = [
   [/\bpra\b/g, 'para'], [/\bta\b/g, 'esta'], [/\bto\b/g, 'estou'], [/\bpreciso de estar\b/g, 'preciso estar'], [/\bprontinha\b/g, 'pronta'],
 ];
 
-const MINUTES: [RegExp, string][] = [
-  [/\be meia\b/g, ':30'], [/\be quarenta e cinco\b/g, ':45'], [/\be quinze\b/g, ':15'], [/\be trinta\b/g, ':30'], [/\be vinte\b/g, ':20'],
-];
 
-/** "três da tarde" -> "3 da tarde"; só converte quando o contexto é horário (evita "um casamento" -> "1 casamento"). */
+const MIN_WORDS: Record<string, string> = { meia: '30', quinze: '15', trinta: '30', vinte: '20', 'quarenta e cinco': '45' };
+
+/** "três da tarde" -> "3 da tarde"; "dez e quinze" -> "10:15". Só converte em contexto de horário (evita "um casamento" -> "1 casamento"). */
 export function numberWordsToDigits(t: string): string {
   const alt = NUM_WORDS.map(([w]) => w).join('|');
-  const re = new RegExp(`\\b(${alt})\\b(?=\\s*(?:h\\b|horas?\\b|da (?:manha|tarde|noite|madrugada)|e (?:meia|quinze|trinta|vinte|quarenta e cinco)\\b))`, 'g');
-  let out = t.replace(re, (_m, w: string) => String(NUM_WORDS.find(([k]) => k === w)![1]));
-  for (const [r, v] of MINUTES) out = out.replace(new RegExp(`(\\d{1,2})\\s*${r.source}`, 'g'), `$1${v}`);
+  const num = (w: string) => String(NUM_WORDS.find(([k]) => k === w)![1]);
+  // 1) "<hora> e <minutos>" primeiro, para "quinze" não virar hora
+  let out = t.replace(new RegExp('(?<![a-z])(' + alt + ')[ ]+e[ ]+(meia|quinze|trinta|vinte|quarenta e cinco)(?![a-z])', 'g'), (_m, w: string, mw: string) => `${num(w)}:${MIN_WORDS[mw]}`);
+  out = out.replace(/(?<![0-9])([0-9]{1,2})[ ]+e[ ]+(meia|quinze|trinta|vinte|quarenta e cinco)(?![a-z])/g, (_m, h: string, mw: string) => `${h}:${MIN_WORDS[mw]}`);
+  // 2) hora por extenso seguida de h/horas/período
+  out = out.replace(new RegExp('(?<![a-z])(' + alt + ')(?![a-z])(?=[ ]*(?:h(?![a-z])|horas?(?![a-z])|da (?:manha|tarde|noite|madrugada)))', 'g'), (_m, w: string) => num(w));
   return out;
 }
 

@@ -15,6 +15,8 @@ import { WhatsAppError } from './channels/types.js';
 import { SimulatedCalendarAdapter } from './services/calendar.js';
 import { RouteError } from './services/transport.js';
 import * as A from './services/analytics.js';
+import { FailureError, listFailures, rateMessage, ratingsSummary, resolveFailure } from './services/failures.js';
+import { eraseCustomerData, getMemory } from './services/memory.js';
 import { SETTING_SCHEMAS, SettingKey, PricingSettingsInput, getSetting, readPricingSettings, setSetting, writePricingSettings } from './services/settings.js';
 import { localToEpoch, parseHM, toIso } from './lib/time.js';
 import { logger } from './lib/logger.js';
@@ -158,6 +160,24 @@ export function createApp(ctx: Ctx) {
     res.type('application/pdf').sendFile(p);
   });
 
+  // ---------- Revisão humana: falhas, avaliações e privacidade ----------
+  app.get('/api/review/failures', (req, res) => res.json({ failures: listFailures(ctx, req.query.status ? String(req.query.status) : undefined) }));
+  app.post('/api/review/failures/:id/resolve', wrap((req, res) => res.json(resolveFailure(ctx, req.params.id,
+    z.object({ regressionRef: z.string().min(3).max(200), note: z.string().max(500).optional() }).parse(req.body)))));
+  app.post('/api/messages/:id/rating', wrap((req, res) => {
+    const b = z.object({ score: z.number().int().min(1).max(5), comment: z.string().max(500).optional() }).parse(req.body);
+    rateMessage(ctx, req.params.id, b.score, b.comment, actorOf(req)); res.status(201).json({ ok: true });
+  }));
+  app.get('/api/review/ratings', (_q, res) => res.json(ratingsSummary(ctx)));
+  app.get('/api/customers/:id/memory', (req, res) => {
+    if (!one(ctx.db, 'SELECT id FROM customers WHERE id=?', req.params.id)) return res.status(404).json({ error: 'NOT_FOUND' });
+    res.json(getMemory(ctx, req.params.id));
+  });
+  app.delete('/api/customers/:id/data', (req, res) => {
+    if (!one(ctx.db, 'SELECT id FROM customers WHERE id=?', req.params.id)) return res.status(404).json({ error: 'NOT_FOUND' });
+    eraseCustomerData(ctx, req.params.id); res.json({ erased: true });
+  });
+
   // ---------- Analytics / eventos ----------
   app.get('/api/analytics/overview', (_q, res) => res.json(A.overview(ctx)));
   app.get('/api/analytics/conversion', (_q, res) => res.json(A.conversion(ctx)));
@@ -186,6 +206,7 @@ export function createApp(ctx: Ctx) {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof ZodError) return res.status(400).json({ error: 'VALIDATION_ERROR', issues: err.issues });
     if (err instanceof Q.QuoteError) return res.status(err.status).json({ error: err.code, message: err.message });
+    if (err instanceof FailureError) return res.status(err.status).json({ error: err.code });
     if (err instanceof WhatsAppError) return res.status(502).json({ error: err.code, message: err.message });
     if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'INVALID_JSON' });
     logger.error('request.failed', { err: err?.stack ?? String(err) });

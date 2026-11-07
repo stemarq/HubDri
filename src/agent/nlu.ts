@@ -72,9 +72,11 @@ export function parseDate(text: string, now: Date): DateMention | undefined {
   if (/\bamanha\b/.test(t)) return { date: addDays(today, 1), needsConfirmation: false, source: 'amanhã' };
   if (/\bhoje\b/.test(t)) return { date: today, needsConfirmation: false, source: 'hoje' };
 
+  // "não é sábado, é domingo": o dia negado não conta
+  const tw = t.replace(/nao (?:e|era|eh) (?:para |pra )?(?:o |a )?(?:proxim[oa] )?(?:domingo|segunda|terca|quarta|quinta|sexta|sabado)(?:-feira)?/g, ' ');
   for (const [w, wd] of WEEKDAY_WORDS) {
     const re = new RegExp(`\\b(proxim[oa]\\s+)?${w}(?:-feira)?(\\s+que vem)?\\b`);
-    const mm = t.match(re);
+    const mm = tw.match(re);
     if (mm) {
       const strictlyAfter = !!(mm[1] || mm[2]);
       let delta = (wd - weekdayOf(today) + 7) % 7;
@@ -106,7 +108,7 @@ interface TimeMention { min?: number; ambiguousHour?: number; periodExplicit: bo
 export function parseTimes(text: string): TimeMention[] {
   const t = preprocess(norm(text));
   const out: TimeMention[] = [];
-  const re = /(?:\bas?\s+)?\b(\d{1,2})\s*(?:h(?:oras?)?|:)\s*(\d{2})?\b(?:\s*(?:da|de)\s*(manha|tarde|noite|madrugada))?|\bas\s+(\d{1,2})(?!\d|\s*(?:de\s+\w+|\/))(?:\s*(?:da|de)\s*(manha|tarde|noite|madrugada))?|\b(\d{1,2})\s+(?:da|de)\s+(manha|tarde|noite|madrugada)\b|\bmeio-dia\b/g;
+  const re = /(?:\bas?\s+)?\b(\d{1,2})\s*(?:h(?:oras?|rs?)?|:)\s*(\d{2})?\b(?:\s*(?:da|de)\s*(manha|tarde|noite|madrugada))?|\bas\s+(\d{1,2})(?!\d|\s*(?:de\s+\w+|\/))(?:\s*(?:da|de)\s*(manha|tarde|noite|madrugada))?|\b(\d{1,2})\s+(?:da|de)\s+(manha|tarde|noite|madrugada)\b|\bmeio-dia\b/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(t))) {
     const ctx = t.slice(Math.max(0, m.index - 45), m.index + m[0].length);
@@ -190,6 +192,11 @@ export function extract(text: string, now: Date, awaiting?: string): Extracted {
   }
   const tf = classifyTimes(text, awaiting);
   Object.assign(e, tf);
+  if (/\b(na verdade|errei|corrigindo|quer dizer|ops|mudei|mudou|trocar|trocando|melhor)\b/.test(raw) && tf.readyMin === undefined && tf.eventStartMin === undefined && tf.desiredStartMin === undefined) {
+    // correção com um único horário e sem rótulo: assume o horário principal (pronta)
+    const only = parseTimes(text);
+    if (only.length === 1) { if (only[0].min !== undefined) { e.readyMin = only[0].min; e.periodExplicit = only[0].periodExplicit; } else e.ambiguousHour = only[0].ambiguousHour; }
+  }
   if (awaiting === 'period' && tf.readyMin === undefined) {
     const p = t.match(/\b(manha|tarde|noite|madrugada)\b/);
     if (p) e.period = p[1] as Extracted['period'];
