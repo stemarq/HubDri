@@ -178,3 +178,26 @@ Ao subir, o hub mostra `dados: Supabase`. Sem essas variáveis, ele continua gra
 - Sem Supabase, o acesso é só uma senha opcional (`HUB_PASSWORD`, HTTP Basic), sem perfis nem registro de quem aprovou.
 - Uma pessoa desativada pela dona pode levar até 30 s para perder o acesso.
 - Notificações por polling (6 s), sem push/e-mail.
+
+---
+
+## Integração hub + agente ADRI
+
+O agente (pasta `agente/`) é a "IA do WhatsApp" deste hub. Fluxo:
+
+1. A cliente conversa com a ADRI (Telegram hoje, WhatsApp oficial depois). Quando todos os dados estão confirmados, o agente envia o lead para `POST /api/webhooks/whatsapp/lead` (agenda, horários, deslocamento estimado e conversa vão no briefing).
+2. O hub calcula, gera o PDF e a Adriana aprova no app (**Fila**).
+3. O hub chama `WHATSAPP_CALLBACK_URL` (`http://localhost:3001/api/hub/callback`): o agente baixa o PDF do hub e entrega para a cliente no chat, com o link de aprovação.
+4. A cliente aprova pelo botão do PDF (ou escrevendo "aceito"): o agente **reserva o horário no Google Agenda** e confirma no chat. Pedidos de mudança escritos no chat voltam ao hub como `mudanca`.
+5. A aba **Conversas** mostra todos os chats, com o histórico completo. A Adriana pode **assumir** a conversa (a ADRI fica em silêncio), escrever para a cliente e **devolver** à ADRI. Escrever já assume a conversa.
+
+Variáveis: `AGENTE_URL`/`AGENTE_TOKEN` no `.env` do hub; `HUB_URL`/`HUB_WEBHOOK_TOKEN`/`HUB_CALLBACK_TOKEN` no `agente/.env` (modelos nos `.env.example`). Google Agenda: `agente/GUIA_GOOGLE_AGENDA.md`.
+
+Para rodar tudo local: `npm start` na raiz (hub, `PORT`) e `npm start` dentro de `agente/` (porta `ADRI_PORT`, padrão 3001). Se o seu ambiente já tiver `SUPABASE_URL` definida (outro projeto), limpe-a ao subir o hub, ou ele tentará usar aquele banco.
+
+### Configurações editáveis, Gemini e entrega
+
+- **Aba Configurações:** a Adriana edita, sem mexer em arquivo, o catálogo e as regras do orçamento (preços, validade, desconto máximo, rodapé do PDF, instruções da IA) e, da ADRI, o endereço de saída, tempos de preparo/trajeto, duração dos serviços e as respostas automáticas (FAQ). As edições do hub ficam em `data/config-editada.json` (fora do Git) e valem na hora.
+- **Gemini no agente:** com `GEMINI_API_KEY` (a mesma do hub) a ADRI usa o Gemini para entender mensagens difíceis e **transcrever áudios de voz**. Sem a chave, segue só com regras e avisa que não ouve áudio.
+- **Entrega com `.env` vazio:** `.env` nunca vai para o Git. Na entrega, a Adriana roda `npm run env:novo` (cria `.env` e `agente/.env` vazios a partir dos modelos, sem sobrescrever os existentes) e preenche as próprias chaves.
+

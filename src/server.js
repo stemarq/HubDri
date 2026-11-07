@@ -10,6 +10,8 @@ import { iaDisponivel, iaNome, situacaoIa } from "./ia.js";
 import { leadExemplo } from "./simulador.js";
 import { paginaCliente } from "./pagina-cliente.js";
 import { loginAtivo, exigirLogin, rotasDeAcesso } from "./auth.js";
+import { rotasConversas } from "./conversas.js";
+import { rotasConfiguracoes } from "./configuracoes.js";
 
 const app = express();
 app.use(express.json({ limit: "40mb" }));
@@ -105,6 +107,8 @@ function autenticar(req, res, next) {
   res.set("WWW-Authenticate", 'Basic realm="HubDri"').status(401).send("Autenticação necessária");
 }
 app.use(loginAtivo ? exigirLogin : autenticar);
+rotasConversas(app, rota); // conversas da ADRI (agente/) dentro do hub
+rotasConfiguracoes(app, rota); // preços, regras e respostas editáveis no app
 app.use(express.static(path.resolve("public")));
 // Imagens do chat: só serve arquivos que pertencem a algum orçamento (vindas do Storage ou do disco).
 app.get("/uploads/:orcamento/:arquivo", rota(async (req, res) => {

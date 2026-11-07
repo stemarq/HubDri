@@ -14,6 +14,7 @@ import { recordFailure } from '../services/failures.js';
 import { APOLOGY, HANDOFF_MSG, MISUNDERSTOOD, OFFER_HUMAN, SERVICE_NAMES, Tone, ask, empathy, firstName, greeting, summary } from './persona.js';
 import { epochToLocal, localToEpoch, WEEKDAYS_PT } from '../lib/time.js';
 import { logger } from '../lib/logger.js';
+import { acceptAndConfirm } from '../services/hub.js';
 import type { InboundEvent } from '../channels/types.js';
 
 export interface InboundInput {
@@ -204,6 +205,24 @@ async function decide(ctx: Ctx, conv: Row, st: State, inp: InboundInput, replies
       const keep = st.slots.name; const tn = st.tone;
       Object.assign(st, emptyState(), { greeted: true, tone: tn }); st.slots.name = keep;
     } else if (status === 'SENT') {
+      const hubQuote = ctx.hub ? one(ctx.db, 'SELECT hub_id FROM quotes WHERE id=?', st.quoteId) : undefined;
+      if (ex.acceptance && hubQuote?.hub_id) {
+        // Com hub: registra a aprovação lá e reserva a agenda (Google Calendar se configurado).
+        try {
+          await ctx.hub!.sendReply(hubQuote.hub_id, 'aprovado', text);
+          ctx.events.emit('CLIENT_ACCEPTANCE_SIGNAL', { quoteId: st.quoteId });
+          await acceptAndConfirm(ctx, st.quoteId, 'cliente-chat');
+          return {}; // a confirmação já foi enviada ao chat
+        } catch (e) { logger.warn('hub.accept.chat.failed', { err: (e as Error).message }); }
+      }
+      if (ex.changeRequest && !ex.acceptance && hubQuote?.hub_id) {
+        try {
+          await ctx.hub!.sendReply(hubQuote.hub_id, 'mudanca', text);
+          run(ctx.db, "UPDATE quotes SET status='IN_HUB', sent_at=NULL WHERE id=?", st.quoteId);
+          say('Anotei o pedido! 💗 Já passei para a Adriana ajustar e, quando estiver pronto, te mando a nova versão por aqui.');
+          return {};
+        } catch (e) { logger.warn('hub.change.failed', { err: (e as Error).message }); }
+      }
       if (ex.acceptance) { run(ctx.db, 'UPDATE quotes SET client_signal=? WHERE id=?', 'ACCEPT', st.quoteId); ctx.events.emit('CLIENT_ACCEPTANCE_SIGNAL', { quoteId: st.quoteId }); say('Que ótimo! 💗 Já avisei a Adriana para confirmar o seu horário e te retornar.'); }
       else if (ex.decline) { run(ctx.db, 'UPDATE quotes SET client_signal=? WHERE id=?', 'DECLINE', st.quoteId); ctx.events.emit('CLIENT_DECLINE_SIGNAL', { quoteId: st.quoteId }); say('Tudo bem! Se quiser, me conta o que pesou na decisão para eu avisar a Adriana. 💗'); }
       else { handoff(ctx, conv.id, 'QUESTION_AFTER_PROPOSAL'); say('Vou chamar a Adriana para te responder sobre isso, tudo bem? 💗'); }

@@ -13,12 +13,14 @@ import { EventBus } from './services/events.js';
 import { getSetting } from './services/settings.js';
 import { AnthropicExtractor, LlmExtractor } from './agent/llm.js';
 import { Transcriber, WhisperTranscriber } from './services/transcribe.js';
+import { HubClient } from './services/hub.js';
+import { GeminiExtractor, GeminiTranscriber } from './agent/gemini.js';
 
 export interface Ctx {
   db: DB; config: Config; now: () => Date;
   channels: Record<ChannelName, ChannelAdapter>;
   events: EventBus; calendar: CalendarService; transport: TransportationEstimator; pdf: PdfRenderer; outbound: OutboundService;
-  llm?: LlmExtractor; transcriber?: Transcriber;
+  llm?: LlmExtractor; transcriber?: Transcriber; hub?: HubClient;
   baseAddress: () => string | undefined;
   mediaDir: string; pdfDir: string;
 }
@@ -35,8 +37,9 @@ export function buildContext(config: Config, overrides: Partial<{ db: DB; now: (
   };
   return {
     db, config, now, channels,
-    llm: overrides.llm === null ? undefined : overrides.llm ?? (config.llm.anthropicApiKey ? new AnthropicExtractor(config.llm.anthropicApiKey, config.llm.model, overrides.fetchFn) : undefined),
-    transcriber: overrides.transcriber === null ? undefined : overrides.transcriber ?? (config.openaiApiKey ? new WhisperTranscriber(config.openaiApiKey, 'whisper-1', overrides.fetchFn) : undefined),
+    hub: config.hub.url ? new HubClient(config, overrides.fetchFn) : undefined,
+    llm: overrides.llm === null ? undefined : overrides.llm ?? (config.gemini.apiKey ? new GeminiExtractor({ apiKey: config.gemini.apiKey, model: config.gemini.model, reserve: config.gemini.reserve }, overrides.fetchFn) : config.llm.anthropicApiKey ? new AnthropicExtractor(config.llm.anthropicApiKey, config.llm.model, overrides.fetchFn) : undefined),
+    transcriber: overrides.transcriber === null ? undefined : overrides.transcriber ?? (config.gemini.apiKey ? new GeminiTranscriber({ apiKey: config.gemini.apiKey, model: config.gemini.model, reserve: config.gemini.reserve }, overrides.fetchFn) : config.openaiApiKey ? new WhisperTranscriber(config.openaiApiKey, 'whisper-1', overrides.fetchFn) : undefined),
     events: new EventBus(db, config, overrides.fetchFn),
     calendar: new CalendarService(db, adapter, () => getSetting(db, 'scheduling').bufferBetweenMinutes),
     transport: new TransportationEstimator(db, provider),

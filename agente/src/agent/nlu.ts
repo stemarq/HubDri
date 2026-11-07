@@ -19,7 +19,7 @@ export interface Extracted {
   wantsHuman?: boolean;
   injectionSuspected?: boolean;
   choice?: number;
-  acceptance?: boolean; decline?: boolean;
+  acceptance?: boolean; decline?: boolean; changeRequest?: boolean;
   ambiguousHour?: number;          // "às 7": manhã ou noite? não vira horário até a cliente esclarecer
   periodExplicit?: boolean;        // a cliente disse manhã/tarde/noite/madrugada explicitamente
   period?: 'manha' | 'tarde' | 'noite' | 'madrugada';
@@ -227,6 +227,7 @@ export function extract(text: string, now: Date, awaiting?: string): Extracted {
   else if (/\bsegunda opcao\b/.test(raw)) e.choice = 2;
 
   if (/\b(aceito|fechado|fechou|pode confirmar|quero fechar|vamos fechar|fechamos|aprovado)\b/.test(raw)) e.acceptance = true;
+  if (/\b(mudar|mudanca|trocar|ajustar|alterar|diferente|tirar|incluir|adicionar|acrescentar|menos|mais uma)\b/.test(raw)) e.changeRequest = true;
   if (/\b(desisti|nao vou fechar|nao quero mais|muito caro|achei caro|vou pensar|cancelar)\b/.test(raw)) e.decline = true;
 
   // Correções, negações e sinais de contexto
