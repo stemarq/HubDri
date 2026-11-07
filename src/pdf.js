@@ -13,7 +13,8 @@ const data = (iso) => new Date(iso).toLocaleDateString("pt-BR");
 const PRETO = "#3A2A23"; // cacau
 const CINZA = "#7B4B4F"; // ameixa
 const LINHA = "#EAD7C6"; // areia
-const DESTAQUE = "#DDBBA8"; // nude — destaque do total
+const PRINCIPAL = "#B66A5C"; // burnt rose — cor principal
+const DESTAQUE = "#DDBBA8"; // nude — faixa de prévia
 
 export function gerarPdf(orc, stream) {
   const cfg = config();
@@ -36,7 +37,7 @@ export function gerarPdf(orc, stream) {
   }
 
   // Cabeçalho
-  doc.font("Helvetica-Bold").fontSize(11).fillColor(PRETO).text(cfg.empresa.nome, L, 48);
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(PRINCIPAL).text(cfg.empresa.nome, L, 48);
   doc.font("Courier").fontSize(8).fillColor(CINZA).text(`${cfg.empresa.contato}  ·  ${cfg.empresa.telefone}`, L, 63);
   label(`Orçamento ${orc.codigo}`, L, 48, { width: W, align: "right" });
   doc.font("Courier").fontSize(8).fillColor(CINZA).text(data(calc.geradoEm), L, 63, { width: W, align: "right" });
@@ -115,9 +116,9 @@ export function gerarPdf(orc, stream) {
   linhaTotal("Subtotal", brl(calc.subtotal), y);
   if (calc.desconto > 0) { y += 16; linhaTotal(`Desconto (${calc.descontoPercentual}%)`, `− ${brl(calc.desconto)}`, y); }
   y += 22;
-  doc.roundedRect(tx, y - 6, tw, 32, 10).fill(DESTAQUE);
-  label("Total", tx + 10, y + 5);
-  doc.font("Helvetica-Bold").fontSize(16).fillColor(PRETO).text(brl(calc.total), tx, y + 1, { width: tw - 10, align: "right" });
+  doc.roundedRect(tx, y - 6, tw, 32, 10).fill(PRINCIPAL);
+  doc.font("Courier-Bold").fontSize(7.5).fillColor("#FFFFFF").text("TOTAL", tx + 12, y + 5, { characterSpacing: 0.8 });
+  doc.font("Helvetica-Bold").fontSize(16).fillColor("#FFFFFF").text(brl(calc.total), tx, y + 1, { width: tw - 10, align: "right" });
   y += 44;
 
   // Imagens de referência
@@ -151,7 +152,7 @@ export function gerarPdf(orc, stream) {
   const link = linkPublico(orc);
   const bw = (W - 12) / 2, bh = 38;
   const botao = (txt, bx, url, cheio) => {
-    if (cheio) doc.roundedRect(bx, y, bw, bh, bh / 2).fill(PRETO);
+    if (cheio) doc.roundedRect(bx, y, bw, bh, bh / 2).fill(PRINCIPAL);
     else doc.roundedRect(bx, y, bw, bh, bh / 2).lineWidth(1).strokeColor(PRETO).stroke();
     doc.font("Courier-Bold").fontSize(10).fillColor(cheio ? "#FFFFFF" : PRETO)
       .text(txt, bx, y + 14, { width: bw, align: "center", characterSpacing: 1 });
