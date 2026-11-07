@@ -1,6 +1,6 @@
 {
   "empresa": {
-    "nome": "HubDri",
+    "nome": "Dri Gianetti Makeup & Beauty",
     "contato": "contato@hubdri.com.br",
     "telefone": "(11) 90000-0000",
     "rodapePdf": "Orçamento válido pelo prazo indicado. A data só fica reservada após a confirmação do sinal."
@@ -8,15 +8,34 @@
   "validadeDias": 7,
   "descontoMaximoPercentual": 10,
   "atrasoHoras": 24,
-  "instrucoesCalculo": "Monte o orçamento usando apenas itens do catálogo. Conte quantas pessoas serão maquiadas (noiva, madrinhas, mães, convidadas) e quais serviços cada uma quer. Inclua deslocamento (ida e volta) se o local for fora da região, taxa de horário especial se o atendimento começar antes das 7h e horas de permanência se a cliente pedir acompanhamento no evento. Se faltar informação, faça uma estimativa conservadora e registre em pontosDeAtencao.",
+  "instrucoesCalculo": "Use SOMENTE os itens do catálogo, com os códigos exatos. Nunca invente serviço, preço, taxa ou combinação que não esteja no catálogo. Quantidade = número de pessoas que recebem aquele serviço.\n\nQuem é quem:\n- Noiva (casamento): use os itens NOIVA-*. \"Pacote de noiva\" ou \"maquiagem e penteado\" = NOIVA-MAKE + NOIVA-PENT.\n- Debutante (a aniversariante de 15 anos): use os itens DEB-*.\n- Demais pessoas adultas (madrinhas, mães, convidadas, formandas, clientes de eventos sociais): MAKE-VISAGISTA. Use MAKE-EXPRESS só se a cliente pedir algo rápido, simples ou \"express\".\n- Crianças: MAKE-INFANTIL.\n\nTeste (prova antes do evento):\n- Só existe para noiva e debutante. Se a cliente pedir teste/prova, use a versão \"+ Teste\" NO LUGAR da versão simples (nunca as duas para a mesma pessoa).\n- Penteado russo para noiva só existe com teste (NOIVA-PENT-RUSSO-TESTE). Se a noiva quiser penteado russo sem teste, não inclua penteado russo e explique em pontosDeAtencao para a Adriana decidir.\n\nPenteados:\n- Inclua penteado só para quem pediu penteado; não suponha que todas as pessoas querem.\n- Versão para cabelos cacheados (PENT-CACHEADO, DEB-PENT-CACHEADO) só se a cliente disser que o cabelo é cacheado. Penteado russo só se a cliente pedir russo.\n\nFinalizações e curso (ESCOVA, BABYLISS, CILIOS, CURSO-AUTOMAKE): só se a cliente pedir.\n\nO que NÃO está na tabela: deslocamento, taxa de horário (madrugada), permanência/retoques no evento. Não cobre nada disso. Se a cliente mencionar ou se o local exigir deslocamento, registre em pontosDeAtencao para a Adriana combinar.\n\nSe faltar informação (por exemplo, quantas pessoas ou quais serviços), não invente: inclua apenas o que foi pedido com certeza e registre a dúvida em pontosDeAtencao.",
   "catalogo": [
-    { "codigo": "MAKE-NOIVA", "descricao": "Maquiagem de noiva", "unidade": "un", "valor": 900 },
-    { "codigo": "TESTE-NOIVA", "descricao": "Teste de maquiagem (noiva)", "unidade": "un", "valor": 350 },
-    { "codigo": "MAKE-SOCIAL", "descricao": "Maquiagem social", "unidade": "pessoa", "valor": 250 },
-    { "codigo": "PENTEADO", "descricao": "Penteado", "unidade": "pessoa", "valor": 200 },
-    { "codigo": "CILIOS", "descricao": "Cílios postiços", "unidade": "pessoa", "valor": 40 },
-    { "codigo": "MADRUGADA", "descricao": "Horário especial (antes das 7h)", "unidade": "un", "valor": 150 },
-    { "codigo": "PERMANENCIA", "descricao": "Permanência no evento (retoques)", "unidade": "hora", "valor": 180 },
-    { "codigo": "DESL", "descricao": "Deslocamento (ida e volta)", "unidade": "km", "valor": 2.5 }
+    { "codigo": "MAKE-EXPRESS", "descricao": "Make Express à Prova d'Água", "unidade": "pessoa", "valor": 159.99 },
+    { "codigo": "MAKE-VISAGISTA", "descricao": "Make Visagista Personalizada à Prova d'Água", "unidade": "pessoa", "valor": 199.99 },
+    { "codigo": "MAKE-INFANTIL", "descricao": "Make Infantil à Prova d'Água", "unidade": "pessoa", "valor": 89.99 },
+
+    { "codigo": "PENT", "descricao": "Penteado Personalizado", "unidade": "pessoa", "valor": 169.99 },
+    { "codigo": "PENT-CACHEADO", "descricao": "Penteado Personalizado para Cabelos Cacheados", "unidade": "pessoa", "valor": 219.99 },
+    { "codigo": "PENT-RUSSO", "descricao": "Penteado Russo", "unidade": "pessoa", "valor": 269.99 },
+
+    { "codigo": "DEB-MAKE", "descricao": "Make Visagista para Debutante", "unidade": "pessoa", "valor": 229.99 },
+    { "codigo": "DEB-MAKE-TESTE", "descricao": "Make Visagista para Debutante + Teste", "unidade": "pessoa", "valor": 399.99 },
+    { "codigo": "DEB-PENT", "descricao": "Penteado para Debutante", "unidade": "pessoa", "valor": 229.99 },
+    { "codigo": "DEB-PENT-CACHEADO", "descricao": "Penteado para Debutante (Cabelos Cacheados)", "unidade": "pessoa", "valor": 259.99 },
+    { "codigo": "DEB-PENT-RUSSO", "descricao": "Penteado Russo para Debutante", "unidade": "pessoa", "valor": 279.99 },
+    { "codigo": "DEB-PENT-TESTE", "descricao": "Penteado para Debutante + Teste", "unidade": "pessoa", "valor": 449.99 },
+    { "codigo": "DEB-PENT-RUSSO-TESTE", "descricao": "Penteado Russo para Debutante + Teste", "unidade": "pessoa", "valor": 529.99 },
+
+    { "codigo": "NOIVA-MAKE", "descricao": "Make Visagista para Noiva", "unidade": "pessoa", "valor": 249.99 },
+    { "codigo": "NOIVA-MAKE-TESTE", "descricao": "Make Visagista para Noiva + Teste", "unidade": "pessoa", "valor": 449.99 },
+    { "codigo": "NOIVA-PENT", "descricao": "Penteado para Noiva", "unidade": "pessoa", "valor": 279.99 },
+    { "codigo": "NOIVA-PENT-TESTE", "descricao": "Penteado para Noiva + Teste", "unidade": "pessoa", "valor": 499.99 },
+    { "codigo": "NOIVA-PENT-RUSSO-TESTE", "descricao": "Penteado Russo para Noiva + Teste", "unidade": "pessoa", "valor": 599.99 },
+
+    { "codigo": "ESCOVA", "descricao": "Escova Modelada", "unidade": "pessoa", "valor": 79.99 },
+    { "codigo": "BABYLISS", "descricao": "Modelagem com Baby Liss", "unidade": "pessoa", "valor": 59.99 },
+    { "codigo": "CILIOS", "descricao": "Aplicação de Cílios Postiços", "unidade": "pessoa", "valor": 35.00 },
+
+    { "codigo": "CURSO-AUTOMAKE", "descricao": "Curso de Automaquiagem Personalizado", "unidade": "un", "valor": 249.99 }
   ]
 }

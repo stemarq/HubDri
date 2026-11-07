@@ -93,9 +93,9 @@ O retorno **não** traz link para a cliente pedir alterações — só `linkApro
 
 ## Cálculo
 
-`config/hub.config.json` define o catálogo de preços, validade, desconto máximo e as instruções para a IA. **Os preços do catálogo são de exemplo — troque pelos valores reais.**
+`config/hub.config.json` define o catálogo de preços, validade, desconto máximo e as instruções para a IA. O catálogo é a **tabela oficial da Dri Gianetti** (maquiagem, penteados, debutantes, noivas, finalizações e curso). Deslocamento, taxa de horário e permanência **não estão na tabela**: a IA não cobra e só avisa em "pontos de atenção" para a Adriana combinar à parte. Para mudar preços, use a aba **Configurações** (grava em `data/config-editada.json`, que vale sobre o arquivo).
 
-Com `GEMINI_API_KEY` (Gemini, modelo `gemini-3.6-flash`, trocável em `GEMINI_MODEL`) ou `ANTHROPIC_API_KEY` (Claude, `claude-opus-5-5`), a IA lê o briefing, os dados do evento, a conversa e até 6 fotos (referências de make) e escolhe **apenas códigos e quantidades** do catálogo; os valores e totais são sempre calculados pelo hub. Sem chave (ou se a IA falhar), entra o cálculo por regras (noiva, nº de pessoas, penteado, cílios, horário antes das 7h, km) com um aviso para revisar.
+Com `GEMINI_API_KEY` (Gemini, modelo `gemini-3.6-flash`, trocável em `GEMINI_MODEL`) ou `ANTHROPIC_API_KEY` (Claude, `claude-opus-5-5`), a IA lê o briefing, os dados do evento, a conversa e até 6 fotos (referências de make) e escolhe **apenas códigos e quantidades** do catálogo; os valores e totais são sempre calculados pelo hub. Sem chave (ou se a IA falhar), entra o cálculo por regras (noiva ou debutante, teste, nº de pessoas, penteado, cílios) com um aviso para revisar.
 
 ### Qual IA
 

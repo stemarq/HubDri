@@ -1,6 +1,7 @@
 // Interface do hub: fila de prioridade, detalhe do orçamento, notificações.
 import { telaConversas } from "/conversas.js";
 import { telaConfiguracoes } from "/configuracoes.js";
+import { telaPreco } from "/precificacao.js";
 const $ = (s, el = document) => el.querySelector(s);
 const app = $("#app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -708,6 +709,7 @@ async function render({ carregando = false } = {}) {
     if (tela === "orcamento") atualOrc = await telaOrcamento(param);
     else if (tela === "saida") { atualOrc = null; await telaSaida(); }
     else if (tela === "conversas") { atualOrc = null; await telaConversas(param); }
+    else if (tela === "preco") { atualOrc = null; telaPreco(); }
     else if (tela === "configuracoes") { atualOrc = null; await telaConfiguracoes(); }
     else {
       atualOrc = null;

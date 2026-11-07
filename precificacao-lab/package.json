@@ -1,0 +1,1 @@
+{"name":"precificacao-lab","private":true,"type":"commonjs","scripts":{"test":"node --test test/heuristica.test.js"}}
