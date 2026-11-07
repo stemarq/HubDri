@@ -22,7 +22,8 @@ export interface Config {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const mapsApiKey = env.GOOGLE_MAPS_API_KEY || undefined;
   return {
-    port: Number(env.ADRI_PORT ?? 3001),
+    // ADRI_PORT localmente; PORT é a porta que servidores como o Railway definem.
+    port: Number(env.ADRI_PORT ?? env.PORT ?? 3001),
     adminToken: env.ADMIN_API_TOKEN || undefined,
     dbPath: env.DB_PATH ?? 'data/adri.db',
     dataDir: env.DATA_DIR ?? 'data',
