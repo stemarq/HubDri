@@ -3,124 +3,171 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Simulador de Preço de Corrida</title>
+<title>Precificação de Corrida</title>
 <style>
-  :root{--bg:#f6f7f9;--card:#fff;--tx:#1a1d23;--mu:#64748b;--ac:#2563eb;--bd:#e2e8f0;--ok:#16a34a}
-  @media (prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#181e26;--tx:#e6e9ee;--mu:#94a3b8;--ac:#60a5fa;--bd:#2a3340;--ok:#4ade80}}
+  :root{--bg:#f6f7f9;--card:#fff;--tx:#1a1d23;--mu:#64748b;--ac:#2563eb;--bd:#e2e8f0;--ok:#16a34a;--wa:#d97706;--er:#dc2626}
+  @media (prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#181e26;--tx:#e6e9ee;--mu:#94a3b8;--ac:#60a5fa;--bd:#2a3340;--ok:#4ade80;--wa:#fbbf24;--er:#f87171}}
   *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,sans-serif}
-  main{max-width:960px;margin:0 auto;padding:16px;display:grid;gap:16px}
-  h1{font-size:20px;margin:8px 0 0}h2{font-size:16px;margin:0 0 12px}
+  main{max-width:880px;margin:0 auto;padding:16px;display:grid;gap:16px}
+  h1{font-size:20px;margin:8px 0 0}h2{font-size:16px;margin:0 0 4px}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--bd)}
+  .tab{background:none;color:var(--mu);border:0;border-bottom:3px solid transparent;border-radius:0;padding:10px 14px;cursor:pointer;font:inherit;font-weight:600}
+  .tab.on{color:var(--ac);border-color:var(--ac)}
   .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:12px}
   label{display:grid;gap:4px;font-size:13px;color:var(--mu)}
-  input,button{font:inherit;padding:8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
-  label.chk{display:flex;align-items:center;gap:8px;color:var(--tx)}label.chk input{width:auto}
-  button{cursor:pointer;background:var(--ac);color:#fff;border:0}button.sec{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
-  .preco{font-size:40px;font-weight:700}.faixa{color:var(--mu)}
+  input,select,button{font:inherit;padding:9px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
+  button.p{cursor:pointer;background:var(--ac);color:#fff;border:0;font-weight:600}
+  button.s{cursor:pointer}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{cursor:pointer}.seg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+  .big{font-size:48px;font-weight:700;line-height:1.1}.mu{color:var(--mu);font-size:13px}.err{color:var(--er)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chip{background:var(--bg);border:1px solid var(--bd);border-radius:20px;padding:2px 10px;font-size:12px}
   table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:6px;border-bottom:1px solid var(--bd);text-align:right}th:first-child,td:first-child{text-align:left}
-  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}.mu{color:var(--mu);font-size:13px}.err{color:#dc2626}
+  .bar{height:10px;background:var(--bd);border-radius:6px;overflow:hidden;margin:8px 0}.bar>i{display:block;height:100%;background:var(--ok)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  details{margin-top:8px}summary{cursor:pointer;color:var(--mu)}
+  .hide{display:none}
 </style>
 </head>
 <body>
 <main>
-  <h1>Simulador de Preço de Corrida</h1>
-  <p class="mu">Estimativa heurística (não é o preço oficial de nenhum app). Calibre com cotações reais para reduzir o erro.</p>
+  <h1>Precificação de Corrida</h1>
+  <div class="tabs">
+    <button class="tab on" data-t="sim">Simulação</button>
+    <button class="tab" data-t="cal">Calibração Uber</button>
+    <button class="tab" data-t="aj">Ajustes</button>
+  </div>
 
-  <section class="card">
-    <h2>1. Simular</h2>
+  <!-- SIMULAÇÃO -->
+  <section id="sim" class="card">
+    <h2>Quanto cobrar nessa corrida?</h2>
+    <div class="mu">Preencha o trajeto e o horário. O preço sempre sobe para o próximo múltiplo de <b id="passoTxt">10</b>.</div>
     <div class="grid">
-      <label>Distância (km)<input id="km" type="number" step="0.1" value="10"></label>
-      <label>Duração (min, sem trânsito)<input id="min" type="number" step="1" value="22"></label>
-      <label>Data e hora<input id="dh" type="datetime-local"></label>
-      <label>Extras (pedágio/taxa, R$)<input id="ext" type="number" step="0.5" value="0"></label>
+      <label>Distância (km)<input id="km" type="number" step="0.1" value="10" inputmode="decimal"></label>
+      <label>Tempo de viagem (min)<input id="min" type="number" step="1" value="22" inputmode="numeric"></label>
+      <label>Dia e hora<input id="dh" type="datetime-local"></label>
     </div>
-    <div class="row">
-      <label class="chk"><input id="chuva" type="checkbox"> Chuva</label>
-      <label class="chk"><input id="evento" type="checkbox"> Evento/aglomeração</label>
-      <button id="calc">Calcular</button>
+    <div class="grid">
+      <div><div class="mu" style="margin-bottom:4px">Chuva</div>
+        <div class="seg" id="chuva"><button data-v="0" class="on">Sem chuva</button><button data-v="0.5">Pode chover</button><button data-v="1">Chovendo</button></div></div>
+      <div><div class="mu" style="margin-bottom:4px">Movimento na região</div>
+        <div class="seg" id="evento"><button data-v="0" class="on">Normal</button><button data-v="1">Evento / lotado</button></div></div>
+      <label>Pedágio ou taxa (R$)<input id="ext" type="number" step="0.5" value="0" inputmode="decimal"></label>
     </div>
-    <div id="res" style="margin-top:12px"></div>
+    <div class="row"><button class="p" id="calc">Calcular preço</button></div>
+    <div id="res" style="margin-top:16px"></div>
   </section>
 
-  <section class="card">
-    <h2>2. Cotações reais (para medir e calibrar)</h2>
-    <div class="mu">Usa os campos acima + o preço que o app mostrou.</div>
-    <div class="row">
-      <label>Preço real (R$)<input id="preco" type="number" step="0.01"></label>
-      <button id="add">Registrar cotação</button>
-      <button id="cal" class="sec">Calibrar parâmetros</button>
-      <button id="clr" class="sec">Limpar tudo</button>
-    </div>
+  <!-- CALIBRAÇÃO -->
+  <section id="cal" class="card hide">
+    <h2>Calibração Uber</h2>
+    <div class="mu">Para o modelo aprender, faça trajetos de teste e registre o preço que o app da Uber mostrou. Quanto mais corridas, melhor o modelo fica.</div>
+
+    <div style="margin-top:12px"><b>1.</b> Preencha o trajeto na aba Simulação (km, tempo, hora e chuva).</div>
+    <div class="row" style="margin-top:6px"><b>2.</b>
+      <label style="grid-auto-flow:column;align-items:center">Preço da Uber (R$)<input id="preco" type="number" step="0.01" inputmode="decimal" style="width:120px"></label>
+      <button class="p" id="add">Registrar corrida</button></div>
     <div id="msg" class="mu" style="margin-top:8px"></div>
-    <div style="overflow:auto"><table id="tab"></table></div>
+
+    <div style="margin-top:16px"><b>3.</b> Progresso do aprendizado</div>
+    <div class="bar"><i id="prog" style="width:0"></i></div>
+    <div id="progTxt" class="mu"></div>
+    <div id="acc" style="margin-top:12px"></div>
+    <div class="row"><button class="p" id="treinar">Treinar modelo com as corridas</button><button class="s" id="clr">Apagar corridas</button></div>
+    <div style="overflow:auto;margin-top:12px"><table id="tab"></table></div>
   </section>
 
-  <section class="card">
-    <h2>3. Parâmetros</h2>
+  <!-- AJUSTES -->
+  <section id="aj" class="card hide">
+    <h2>Ajustes avançados</h2>
+    <div class="mu">Valores que o modelo usa. Normalmente você não precisa mexer: o botão Treinar ajusta base, km e minuto sozinho.</div>
     <div class="grid" id="params"></div>
-    <div class="row"><button id="rst" class="sec">Restaurar padrão</button></div>
+    <div class="row"><button class="s" id="rst">Restaurar padrão</button></div>
   </section>
 </main>
+
 <script src="heuristica.js"></script>
 <script>
 const H = window.HubDriHeuristica;
 const $ = (id) => document.getElementById(id);
 const LS = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
-let params = LS.get('hd_params', {...H.PARAMS_PADRAO});
+let params = Object.assign({}, H.PARAMS_PADRAO, LS.get('hd_params', {}));
 let obs = LS.get('hd_obs', []);
-const nomes = { base:'Base (R$)', porKm:'R$/km', porMin:'R$/min', minima:'Tarifa mínima', congestionamentoPico:'Fator trânsito pico', surgePico:'Surge pico', surgeChuva:'Surge chuva', surgeNoite:'Surge noite', surgeEvento:'Surge evento', surgeMax:'Teto do surge', extras:'Extras padrão' };
+const MIN_OBS = 4;
+const nomes = { base:'Valor base (R$)', porKm:'R$ por km', porMin:'R$ por minuto', minima:'Tarifa mínima (R$)', arredondarPara:'Arredondar de em (R$, 0 = não)', congestionamentoPico:'Trânsito no pico (×tempo)', surgePico:'Aumento no pico (×)', surgeChuva:'Aumento com chuva (×)', surgeNoite:'Aumento à noite (×)', surgeEvento:'Aumento com evento (×)', surgeMax:'Teto do aumento (×)', extras:'Extras padrão (R$)' };
+const brl = (v) => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+const brl0 = (v) => 'R$ ' + (Number.isInteger(v) ? v : Number(v).toFixed(2).replace('.', ','));
+
+// abas
+document.querySelectorAll('.tab').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === b));
+  ['sim', 'cal', 'aj'].forEach((id) => $(id).classList.toggle('hide', id !== b.dataset.t));
+});
+// segmentados
+const seg = { chuva: 0, evento: 0 };
+['chuva', 'evento'].forEach((id) => $(id).querySelectorAll('button').forEach((b) => b.onclick = () => {
+  seg[id] = +b.dataset.v;
+  $(id).querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+}));
 
 const agora = new Date(); agora.setMinutes(agora.getMinutes() - agora.getTimezoneOffset());
 $('dh').value = agora.toISOString().slice(0, 16);
+const entrada = () => ({ km: +$('km').value, min: +$('min').value, dataHora: $('dh').value, chuva: seg.chuva, evento: !!seg.evento, extras: +$('ext').value || 0 });
+const msg = (t, erro) => { $('msg').textContent = t; $('msg').className = erro ? 'mu err' : 'mu'; };
 
-const brl = (v) => 'R$ ' + v.toFixed(2).replace('.', ',');
-const entrada = () => ({ km: +$('km').value, min: +$('min').value, dataHora: $('dh').value, chuva: $('chuva').checked, evento: $('evento').checked, extras: +$('ext').value || 0 });
-const msg = (t, erro) => { $('msg').textContent = t; $('msg').className = erro ? 'err' : 'mu'; };
+function calcular() {
+  try {
+    const r = H.estimar(entrada(), params), c = r.detalhe.contexto;
+    const chips = [c.pico && 'Horário de pico', c.chuva === 1 && 'Chovendo', c.chuva > 0 && c.chuva < 1 && 'Pode chover', c.noite && 'Noite', c.evento && 'Região movimentada', r.detalhe.usouMinima && 'Tarifa mínima']
+      .filter(Boolean).map((t) => `<span class="chip">${t}</span>`).join('') || '<span class="chip">Condições normais</span>';
+    $('res').innerHTML = `<div class="mu">Cobrar do cliente</div><div class="big">${brl0(r.cobrar)}</div>
+      <div class="mu">Cálculo exato ${brl(r.total)} → arredondado para cima. Uber deve mostrar algo entre ${brl(r.faixa[0])} e ${brl(r.faixa[1])}.</div>
+      <div class="chips">${chips}</div>
+      <details><summary>Ver como foi calculado</summary><div class="mu">Base e distância e tempo: ${brl(r.detalhe.bruto)} · aumento ×${r.detalhe.surge} · extras ${brl(entrada().extras)} · minutos considerados: ${r.detalhe.minutosUsados}</div></details>`;
+  } catch (e) { $('res').innerHTML = `<span class="err">${e.message}</span>`; }
+}
+
+function renderCal() {
+  const n = obs.length;
+  $('prog').style.width = Math.min(100, (n / MIN_OBS) * 100) + '%';
+  $('progTxt').textContent = n >= MIN_OBS ? `${n} corridas registradas. Pronto para treinar (mais corridas = mais precisão).` : `${n} de ${MIN_OBS} corridas para o primeiro treino.`;
+  $('treinar').disabled = n < MIN_OBS;
+  const m = H.erro(obs, params);
+  $('acc').innerHTML = m === null ? '' : `<div>Erro médio do modelo: <b style="color:var(--${m < 15 ? 'ok' : 'wa'})">${m}%</b> <span class="mu">${m < 10 ? '(muito bom)' : m < 15 ? '(bom)' : '(ainda impreciso, registre mais corridas e treine)'}</span></div>`;
+  let h = '<tr><th>Quando</th><th>km</th><th>min</th><th>Uber</th><th>Modelo</th><th>Diferença</th></tr>';
+  obs.slice().reverse().forEach((o) => { const e = H.estimar(o, params).total; const d = ((e - o.preco) / o.preco) * 100; h += `<tr><td>${o.dataHora.replace('T', ' ')}</td><td>${o.km}</td><td>${o.min}</td><td>${brl(o.preco)}</td><td>${brl(e)}</td><td>${d > 0 ? '+' : ''}${d.toFixed(1)}%</td></tr>`; });
+  $('tab').innerHTML = n ? h : '';
+}
 
 function renderParams() {
   $('params').innerHTML = '';
   Object.keys(nomes).forEach((k) => {
     const l = document.createElement('label'); l.textContent = nomes[k];
     const i = document.createElement('input'); i.type = 'number'; i.step = '0.05'; i.value = params[k];
-    i.onchange = () => { params[k] = +i.value; LS.set('hd_params', params); render(); };
+    i.onchange = () => { params[k] = +i.value; LS.set('hd_params', params); $('passoTxt').textContent = params.arredondarPara || '—'; calcular(); renderCal(); };
     l.appendChild(i); $('params').appendChild(l);
   });
 }
 
-function calcular() {
-  try {
-    const r = H.estimar(entrada(), params), c = r.detalhe.contexto;
-    const tags = [c.pico && 'pico', c.chuva && 'chuva', c.noite && 'noite', c.evento && 'evento'].filter(Boolean).join(', ') || 'normal';
-    $('res').innerHTML = `<div class="preco">${brl(r.total)}</div><div class="faixa">Faixa provável: ${brl(r.faixa[0])} a ${brl(r.faixa[1])}</div>
-      <div class="mu">Base calculada ${brl(r.detalhe.bruto)}${r.detalhe.usouMinima ? ' (aplicou mínima)' : ''} · surge ×${r.detalhe.surge} · contexto: ${tags} · minutos usados: ${r.detalhe.minutosUsados}</div>`;
-  } catch (e) { $('res').innerHTML = `<span class="err">${e.message}</span>`; }
-}
-
-function renderObs() {
-  let h = '<tr><th>Quando</th><th>km</th><th>min</th><th>Real</th><th>Estimado</th><th>Erro</th></tr>';
-  obs.forEach((o) => { const e = H.estimar(o, params).total; h += `<tr><td>${o.dataHora.replace('T', ' ')}</td><td>${o.km}</td><td>${o.min}</td><td>${brl(o.preco)}</td><td>${brl(e)}</td><td>${(((e - o.preco) / o.preco) * 100).toFixed(1)}%</td></tr>`; });
-  $('tab').innerHTML = obs.length ? h : '';
-  const m = H.erro(obs, params);
-  if (m !== null) msg(`Erro médio (MAPE): ${m}% em ${obs.length} cotações` + (m < 15 ? ' — bom para apresentar.' : ' — calibre ou ajuste os parâmetros.'));
-}
-
-function render() { calcular(); renderObs(); }
-
 $('calc').onclick = calcular;
 $('add').onclick = () => {
-  const p = +$('preco').value; const e = entrada();
-  if (!(p > 0)) return msg('Informe o preço real.', true);
-  if (!(e.km > 0 && e.min > 0)) return msg('Informe km e minutos.', true);
-  obs.push({ ...e, preco: p }); LS.set('hd_obs', obs); $('preco').value = ''; render();
+  const p = +$('preco').value, e = entrada();
+  if (!(e.km > 0 && e.min > 0)) return msg('Preencha km e tempo na aba Simulação.', true);
+  if (!(p > 0)) return msg('Digite o preço que a Uber mostrou.', true);
+  const previsto = H.estimar(e, params).total;
+  obs.push({ ...e, preco: p }); LS.set('hd_obs', obs); $('preco').value = '';
+  msg(`Registrada. O modelo previa ${brl(previsto)} e a Uber mostrou ${brl(p)}.`);
+  renderCal();
 };
-$('cal').onclick = () => {
-  try { const antes = H.erro(obs, params); params = H.calibrar(obs, params); LS.set('hd_params', params); renderParams(); render(); msg(`Calibrado. Erro ${antes}% → ${H.erro(obs, params)}% (parâmetros base, km e min ajustados).`); }
+$('treinar').onclick = () => {
+  try { const antes = H.erro(obs, params); params = H.calibrar(obs, params); LS.set('hd_params', params); renderParams(); calcular(); renderCal(); msg(`Modelo treinado: erro de ${antes}% para ${H.erro(obs, params)}%.`); }
   catch (e) { msg(e.message, true); }
 };
-$('clr').onclick = () => { if (confirm('Apagar todas as cotações registradas?')) { obs = []; LS.set('hd_obs', obs); $('msg').textContent = ''; render(); } };
-$('rst').onclick = () => { params = {...H.PARAMS_PADRAO}; LS.set('hd_params', params); renderParams(); render(); };
+$('clr').onclick = () => { if (confirm('Apagar todas as corridas registradas?')) { obs = []; LS.set('hd_obs', obs); msg(''); renderCal(); } };
+$('rst').onclick = () => { params = Object.assign({}, H.PARAMS_PADRAO); LS.set('hd_params', params); renderParams(); calcular(); renderCal(); };
 
-renderParams(); render();
+$('passoTxt').textContent = params.arredondarPara || '—';
+renderParams(); calcular(); renderCal();
 </script>
 </body>
 </html>

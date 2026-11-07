@@ -51,3 +51,16 @@ test('calibrar recupera parâmetros de dados sintéticos', () => {
 test('calibrar exige 4 observações', () => {
   assert.throws(() => H.calibrar([]));
 });
+
+test('arredonda para cima de 10 em 10', () => {
+  assert.equal(H.arredondar(62, 10), 70);
+  assert.equal(H.arredondar(65, 10), 70);
+  assert.equal(H.arredondar(70, 10), 70);
+  assert.equal(H.arredondar(70.01, 10), 80);
+  assert.equal(H.arredondar(62.347, 0), 62.35);
+});
+
+test('chuva possível pesa menos que chuva confirmada', () => {
+  const e = (c) => H.estimar({ km: 10, min: 20, dataHora: seg10h, chuva: c }).detalhe.surge;
+  assert.ok(e(0) < e(0.5) && e(0.5) < e(1));
+});

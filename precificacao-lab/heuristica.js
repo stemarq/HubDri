@@ -12,8 +12,14 @@
     surgeNoite: 1.15,     // 22h-5h ou sexta/sábado à noite
     surgeEvento: 1.3,     // evento/aglomeração informado
     surgeMax: 2.5,        // teto do multiplicador
-    extras: 0             // pedágio / taxa de aeroporto
+    extras: 0,            // pedágio / taxa de aeroporto
+    arredondarPara: 10    // preço cobrado sobe para o próximo múltiplo (0 = não arredonda)
   };
+
+  function arredondar(valor, passo) {
+    if (!(passo > 0)) return Math.round(valor * 100) / 100;
+    return Math.ceil(valor / passo - 1e-9) * passo; // 62 -> 70, 65 -> 70, 70 -> 70
+  }
 
   function contexto(dataHora, chuva, evento) {
     const d = new Date(dataHora);
@@ -23,7 +29,7 @@
     return {
       pico: util && ((h >= 7 && h < 9) || (h >= 17 && h < 20)),
       noite: h >= 22 || h < 5 || ((dia === 5 || dia === 6) && h >= 20),
-      chuva: !!chuva,
+      chuva: chuva === true ? 1 : Math.min(1, Math.max(0, Number(chuva) || 0)), // 0 sem, 0.5 pode chover, 1 chovendo
       evento: !!evento
     };
   }
@@ -31,7 +37,7 @@
   function surge(ctx, p) {
     let s = 1;
     if (ctx.pico) s *= p.surgePico;
-    if (ctx.chuva) s *= p.surgeChuva;
+    if (ctx.chuva) s *= 1 + (p.surgeChuva - 1) * ctx.chuva;
     if (ctx.noite) s *= p.surgeNoite;
     if (ctx.evento) s *= p.surgeEvento;
     return Math.min(s, p.surgeMax);
@@ -49,7 +55,7 @@
     const total = sub + Number(entrada.extras != null ? entrada.extras : p.extras);
     const r = (x) => Math.round(x * 100) / 100;
     return {
-      total: r(total), faixa: [r(total * 0.88), r(total * 1.12)],
+      total: r(total), cobrar: arredondar(total, p.arredondarPara), faixa: [r(total * 0.88), r(total * 1.12)],
       detalhe: { bruto: r(bruto), minutosUsados: r(min), surge: r(s), contexto: ctx, usouMinima: bruto < p.minima }
     };
   }
@@ -97,7 +103,7 @@
     return Object.assign({}, p, { base, porKm, porMin });
   }
 
-  const api = { PARAMS_PADRAO, contexto, surge, estimar, erro, calibrar };
+  const api = { PARAMS_PADRAO, arredondar, contexto, surge, estimar, erro, calibrar };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.HubDriHeuristica = api;
 })(typeof window !== 'undefined' ? window : globalThis);
