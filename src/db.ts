@@ -42,6 +42,9 @@ CREATE TABLE IF NOT EXISTS approval_history (id TEXT PRIMARY KEY, quote_id TEXT 
 CREATE TABLE IF NOT EXISTS business_events (id TEXT PRIMARY KEY, type TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_events_type ON business_events(type, created_at);
 CREATE TABLE IF NOT EXISTS business_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS customer_memory (customer_id TEXT PRIMARY KEY REFERENCES customers(id), data TEXT NOT NULL, updated_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_failures (id TEXT PRIMARY KEY, conversation_id TEXT, category TEXT NOT NULL, message TEXT, detail TEXT, status TEXT NOT NULL, regression_ref TEXT, note TEXT, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS message_ratings (id TEXT PRIMARY KEY, message_id TEXT NOT NULL, score INTEGER NOT NULL, comment TEXT, actor TEXT, created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS calendar_events (id TEXT PRIMARY KEY, title TEXT NOT NULL, start_ts INTEGER NOT NULL, end_ts INTEGER NOT NULL, created_at INTEGER NOT NULL);
 `;
 

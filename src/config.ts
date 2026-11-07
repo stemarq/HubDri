@@ -11,6 +11,8 @@ export interface Config {
   hubWebhookUrl?: string;
   hubWebhookSecret?: string;
   chromePath?: string;
+  llm: { anthropicApiKey?: string; model: string };
+  openaiApiKey?: string;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -40,6 +42,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     hubWebhookUrl: env.HUB_WEBHOOK_URL || undefined,
     hubWebhookSecret: env.HUB_WEBHOOK_SECRET || undefined,
     chromePath: env.CHROME_PATH || undefined,
+    llm: { anthropicApiKey: env.ANTHROPIC_API_KEY || undefined, model: env.LLM_MODEL || 'claude-haiku-5-5' },
+    openaiApiKey: env.OPENAI_API_KEY || undefined,
   };
 }
 

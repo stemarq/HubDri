@@ -17,6 +17,7 @@ export interface Slots {
   date?: string; dateConfirmed?: boolean;
   readyMin?: number; eventStartMin?: number; desiredStartMin?: number;
   address?: string; addressFull?: boolean; neighborhood?: string;
+  ambiguousHour?: number; ambiguousDate?: 'weekend' | 'week'; readyExplicit?: boolean;
   name?: string; inspirations: string[]; weather?: 'rain' | 'clear' | null;
 }
 export class QuoteError extends Error { constructor(public code: string, public status = 409, msg?: string) { super(msg ?? code); } }

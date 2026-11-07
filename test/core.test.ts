@@ -167,7 +167,8 @@ void NOW;
 describe('respostas curtas e endereços reais', () => {
   it('"3 da manhã" e número solto respondem "que horas"', () => {
     expect(extract('3 da manhã', NOW, 'ready').readyMin).toBe(180);
-    expect(extract('3', NOW, 'ready').readyMin).toBe(180);
+    expect(extract('3', NOW, 'ready')).toMatchObject({ ambiguousHour: 3 }); // manhã ou tarde? pergunta
+    expect(extract('3', NOW, 'ready').readyMin).toBeUndefined();
     expect(extract('7 da noite', NOW, 'ready').readyMin).toBe(19 * 60);
   });
   it('endereço com abreviações e complemento', () => {
