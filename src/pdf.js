@@ -19,7 +19,7 @@ const DESTAQUE = "#DDBBA8"; // nude — faixa de prévia
 export function gerarPdf(orc, stream) {
   const cfg = config();
   const calc = orc.calculo;
-  const aprovado = orc.aprovacoes.every((a) => a.status === "aprovado");
+  const aprovado = Boolean(orc.aprovadoEm);
   const doc = new PDFDocument({ size: "A4", margin: 48, info: { Title: `Orçamento ${orc.codigo}`, Author: cfg.empresa.nome } });
   doc.pipe(stream);
 
@@ -33,7 +33,7 @@ export function gerarPdf(orc, stream) {
   if (!aprovado) {
     doc.rect(0, 0, doc.page.width, 18).fill(DESTAQUE);
     doc.font("Courier-Bold").fontSize(7.5).fillColor(PRETO)
-      .text("PRÉVIA INTERNA — AGUARDANDO APROVAÇÕES — NÃO ENVIAR", 0, 6, { width: doc.page.width, align: "center", characterSpacing: 0.8 });
+      .text("PRÉVIA INTERNA — AINDA NÃO APROVADO — NÃO ENVIAR", 0, 6, { width: doc.page.width, align: "center", characterSpacing: 0.8 });
   }
 
   // Cabeçalho

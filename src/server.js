@@ -68,7 +68,7 @@ app.get("/p/:token", (req, res) => {
 
 app.get("/p/:token/orcamento.pdf", (req, res) => {
   const orc = store.acharPorToken(req.params.token);
-  if (!orc?.calculo || !orc.aprovacoes.every((a) => a.status === "aprovado")) return res.status(404).send("PDF indisponível");
+  if (!orc?.calculo || !orc.aprovadoEm) return res.status(404).send("PDF indisponível");
   res.type("pdf").set("Content-Disposition", `inline; filename="${orc.codigo}.pdf"`);
   gerarPdf(orc, res);
 });
@@ -109,7 +109,7 @@ const resumo = (o) => ({
   atualizadoEm: o.atualizadoEm,
   total: o.calculo?.total ?? null,
   imagens: o.imagens.length,
-  aprovacoes: { feitas: o.aprovacoes.filter((a) => a.status === "aprovado").length, total: o.aprovacoes.length },
+  aprovado: Boolean(o.aprovadoEm),
   primeiraImagem: o.imagens[0]?.arquivo || null,
 });
 
@@ -118,7 +118,6 @@ app.get("/api/meta", (req, res) => {
   res.json({
     status: STATUS,
     pendentes: PENDENTES,
-    etapas: cfg.etapasAprovacao,
     catalogo: cfg.catalogo,
     empresa: cfg.empresa.nome,
     descontoMaximo: cfg.descontoMaximoPercentual,
@@ -159,7 +158,7 @@ app.get("/api/orcamentos/:id/pdf", rota((req, res) => {
 }));
 
 app.post("/api/orcamentos/:id/aprovar", rota(async (req, res) => {
-  res.json(await fluxo.aprovar(req.params.id, req.body.etapa));
+  res.json(await fluxo.aprovar(req.params.id));
 }));
 app.post("/api/orcamentos/:id/mudanca", rota((req, res) => {
   res.json(fluxo.solicitarMudanca(req.params.id, req.body.comentario));

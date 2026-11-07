@@ -5,7 +5,6 @@
     "telefone": "(11) 90000-0000",
     "rodapePdf": "Orçamento válido pelo prazo indicado. A data só fica reservada após a confirmação do sinal."
   },
-  "etapasAprovacao": ["Comercial", "Financeiro"],
   "validadeDias": 7,
   "descontoMaximoPercentual": 10,
   "atrasoHoras": 24,

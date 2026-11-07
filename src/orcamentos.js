@@ -36,8 +36,9 @@ function historico(orc, evento, detalhe = "") {
   orc.atualizadoEm = agora();
 }
 
-function resetarAprovacoes(orc) {
-  orc.aprovacoes = config().etapasAprovacao.map((etapa) => ({ etapa, status: "pendente", em: null }));
+// Aprovação única: a empresária aprova e o PDF segue para o WhatsApp.
+function limparAprovacao(orc) {
+  orc.aprovadoEm = null;
 }
 
 // ---------- Entrada (webhook da IA do WhatsApp) ----------
@@ -92,13 +93,12 @@ export async function receberLead(payload) {
       conversa: [],
       imagens: [],
       calculo: null,
-      aprovacoes: [],
+      aprovadoEm: null,
       revisoes: [],
       historico: [],
       envios: [],
       respostaCliente: null,
     };
-    resetarAprovacoes(orc);
     store.orcamentos().push(orc);
   }
 
@@ -162,7 +162,7 @@ export async function calcular(id, pedidoDeMudanca = null) {
 
   orc.calculo = montarCalculo(proposta, cfg, geradoPor);
   if (!orc.briefing.resumo && proposta.resumo) orc.briefing.resumo = proposta.resumo;
-  resetarAprovacoes(orc);
+  limparAprovacao(orc);
   orc.status = "aguardando_aprovacao";
   historico(orc, "Orçamento calculado", `${geradoPor === "ia" ? "IA" : "Regras"} · total R$ ${orc.calculo.total.toFixed(2)}`);
   salvar();
@@ -176,18 +176,13 @@ function exigir(orc, ...status) {
   if (!status.includes(orc.status)) throw new ErroFluxo(`Ação indisponível no status "${STATUS[orc.status]}"`, 409);
 }
 
-export async function aprovar(id, etapa) {
+export async function aprovar(id) {
   const orc = store.acharOrcamento(id);
   exigir(orc, "aguardando_aprovacao");
-  const ap = orc.aprovacoes.find((a) => a.etapa === etapa);
-  if (!ap) throw new ErroFluxo("Etapa de aprovação inválida");
-  if (ap.status === "aprovado") throw new ErroFluxo("Etapa já aprovada", 409);
-  Object.assign(ap, { status: "aprovado", em: agora() });
-  historico(orc, `Aprovado · ${etapa}`);
+  orc.aprovadoEm = agora();
+  historico(orc, "Orçamento aprovado");
   salvar();
-
-  if (orc.aprovacoes.every((a) => a.status === "aprovado")) await enviar(orc.id);
-  return orc;
+  return enviar(orc.id);
 }
 
 export function solicitarMudanca(id, comentario) {
@@ -224,7 +219,7 @@ export function editarCalculo(id, { itens, descontoPercentual }) {
     calc.descontoPercentual = Math.min(Math.max(Number(descontoPercentual) || 0, 0), cfg.descontoMaximoPercentual);
   calc.editadoManualmente = true;
   recalcularTotais(calc);
-  resetarAprovacoes(orc);
+  limparAprovacao(orc);
   orc.status = "aguardando_aprovacao";
   historico(orc, "Orçamento editado manualmente", `total R$ ${calc.total.toFixed(2)}`);
   salvar();
@@ -237,7 +232,7 @@ export const linkPdf = (orc) => `${env.publicUrl}/p/${orc.tokenPublico}/orcament
 export async function enviar(id) {
   const orc = store.acharOrcamento(id);
   exigir(orc, "aguardando_aprovacao", "falha_envio");
-  if (!orc.aprovacoes.every((a) => a.status === "aprovado")) throw new ErroFluxo("Faltam aprovações", 409);
+  if (!orc.aprovadoEm) throw new ErroFluxo("Orçamento ainda não aprovado", 409);
   orc.status = "enviando";
   salvar();
 
