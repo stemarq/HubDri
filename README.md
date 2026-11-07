@@ -93,12 +93,33 @@ Mobile-first, tema claro, elementos arredondados e sem animações. Paleta nude/
 
 O esquema fica em `supabase/migrations/`. A primeira migration cria:
 
-- `orcamentos`: cliente, evento, briefing e cálculo em `jsonb`. Também tem `total`, gerado a partir do cálculo, a aprovação única e a resposta da cliente.
-- `orcamento_imagens`, `orcamento_mensagens`, `orcamento_historico`, `orcamento_revisoes` e `orcamento_envios`.
+- `perfis`: quem pode entrar no hub, ligado ao login do Supabase Auth, com papel `dona` ou `equipe`.
+- `orcamentos`: cliente, evento, briefing e cálculo em `jsonb`. Também tem `total`, gerado a partir do cálculo, a aprovação única com `aprovado_por` e a resposta da cliente.
+- `orcamento_imagens`, `orcamento_mensagens`, `orcamento_historico`, `orcamento_revisoes` e `orcamento_envios`. O histórico e as revisões guardam o `autor_id`.
 - `notificacoes` e `saida_whatsapp`.
 - O bucket privado `imagens-orcamento` no Storage, para as fotos do chat.
 
-O código `ORC-0001` vem de uma sequence e o token público é gerado no banco. Um índice único impede dois orçamentos abertos para a mesma conversa. O RLS está ligado e não tem políticas, então só o servidor, com a chave `service_role`, acessa os dados.
+O código `ORC-0001` vem de uma sequence e o token público é gerado no banco. Um índice único impede dois orçamentos abertos para a mesma conversa.
+
+### Login e permissões
+
+O esquema já está pronto para login pelo Supabase Auth, mas a tela de login do hub ainda não existe.
+
+- **Conta não é acesso:** toda conta nova ganha um perfil **inativo**, e só a dona libera.
+- **Equipe ativa:** lê os orçamentos, cria e edita orçamentos, marca notificações como lidas e grava histórico só em seu próprio nome.
+- **Dona:** além disso, libera pessoas, muda papéis e apaga orçamentos.
+- **Chave `anon`:** não acessa nada.
+- **Servidor do hub:** usa a `service_role` (webhooks, página da cliente e a interface atual), então não depende dessas regras.
+
+Para liberar a primeira dona:
+1. Crie o usuário em **Authentication → Users → Add user**.
+2. Rode no SQL Editor:
+
+   ```sql
+   update public.perfis set papel = 'dona', ativo = true where email = 'email@dela.com';
+   ```
+
+Vale desligar o cadastro aberto (**Authentication → Sign In / Providers → Allow new users to sign up**) e entrar só por convite.
 
 Para aplicar:
 
