@@ -17,6 +17,30 @@ import { carregarConfigDoBanco } from "./config-banco.js";
 await carregarConfigDoBanco();
 
 const app = express();
+
+// Vercel: cada requisição relê o Supabase (outra instância pode ter gravado) e só responde
+// depois que as gravações desta requisição terminarem (a instância congela após a resposta).
+if (store.SERVERLESS) {
+  app.use((req, res, next) => {
+    const end = res.end;
+    res.end = function (...args) {
+      store.aguardarGravacoes().catch(() => {}).finally(() => end.apply(this, args));
+      return this;
+    };
+    next();
+  });
+  app.use(async (req, res, next) => {
+    if (/\.(css|js|png|jpe?g|svg|ico|woff2?)$/i.test(req.path) && !req.path.startsWith("/uploads/")) return next();
+    try {
+      await Promise.all([store.recarregar(), carregarConfigDoBanco()]);
+      next();
+    } catch (e) {
+      console.error(e);
+      res.status(503).json({ erro: "Não deu para ler os dados do Supabase. Tente de novo em instantes." });
+    }
+  });
+}
+
 app.use(express.json({ limit: "40mb" }));
 app.use(express.urlencoded({ extended: false }));
 
@@ -220,18 +244,23 @@ if (!env.producao) {
   }));
 }
 
-const servidor = app.listen(env.port, () => {
-  console.log(`HubDri rodando em ${env.publicUrl} · dados: ${store.modo === "supabase" ? "Supabase" : "data/db.json"}`);
-  if (!env.webhookToken) console.warn("! HUB_WEBHOOK_TOKEN vazio: webhooks aceitam qualquer chamada.");
-  if (!env.callbackUrl) console.warn("! WHATSAPP_CALLBACK_URL vazio: retorno ao WhatsApp em modo simulado.");
-  (iaDisponivel() ? console.log : console.warn)((iaDisponivel() ? "" : "! ") + situacaoIa());
-});
-
-// Ao desligar, termina as gravações pendentes no Supabase antes de sair.
-for (const sinal of ["SIGINT", "SIGTERM"]) {
-  process.once(sinal, async () => {
-    servidor.close();
-    await store.aguardarGravacoes();
-    process.exit(0);
+// Local (npm run dev/start): servidor próprio. Na Vercel, api/index.js exporta o app.
+if (!store.SERVERLESS) {
+  const servidor = app.listen(env.port, () => {
+    console.log(`HubDri rodando em ${env.publicUrl} · dados: ${store.modo === "supabase" ? "Supabase" : "data/db.json"}`);
+    if (!env.webhookToken) console.warn("! HUB_WEBHOOK_TOKEN vazio: webhooks aceitam qualquer chamada.");
+    if (!env.callbackUrl) console.warn("! WHATSAPP_CALLBACK_URL vazio: retorno ao WhatsApp em modo simulado.");
+    (iaDisponivel() ? console.log : console.warn)((iaDisponivel() ? "" : "! ") + situacaoIa());
   });
+
+  // Ao desligar, termina as gravações pendentes no Supabase antes de sair.
+  for (const sinal of ["SIGINT", "SIGTERM"]) {
+    process.once(sinal, async () => {
+      servidor.close();
+      await store.aguardarGravacoes();
+      process.exit(0);
+    });
+  }
 }
+
+export default app;

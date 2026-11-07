@@ -80,7 +80,7 @@ export async function receberLead(payload) {
   if (novo) {
     orc = {
       id: novoId(),
-      codigo: store.proximoCodigo(),
+      codigo: await store.proximoCodigo(),
       tokenPublico: crypto.randomBytes(16).toString("hex"),
       status: "calculando",
       criadoEm: agora(),
@@ -136,7 +136,9 @@ export async function receberLead(payload) {
 // ---------- Cálculo ----------
 
 function calcularEmSegundoPlano(id, pedido) {
-  calcular(id, pedido).catch((e) => console.error("Falha no cálculo", id, e));
+  const tarefa = store.segurar(store.acharOrcamento(id), () => calcular(id, pedido))
+    .catch((e) => console.error("Falha no cálculo", id, e));
+  store.depoisDaResposta(tarefa);
 }
 
 export async function calcular(id, pedidoDeMudanca = null) {

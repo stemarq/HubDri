@@ -7,12 +7,17 @@
 // persiste o que mudou. No Supabase a gravação é em segundo plano e em ordem; se falhar,
 // é tentada de novo no próximo `salvar()`.
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "./config.js";
 
-export const DATA_DIR = path.resolve("data");
+// Na Vercel cada requisição pode cair numa instância diferente, congelada depois da resposta.
+// Por isso lá o hub relê o Supabase a cada requisição (recarregar) e espera as gravações antes de responder.
+export const SERVERLESS = Boolean(process.env.VERCEL);
+// Na Vercel só /tmp aceita escrita: vira o cache das imagens do Storage.
+export const DATA_DIR = SERVERLESS ? path.join(os.tmpdir(), "hubdri") : path.resolve("data");
 // No modo Supabase vira só um cache local das imagens do Storage.
 export const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const DB_FILE = path.join(DATA_DIR, "db.json");
@@ -24,6 +29,7 @@ const supa = env.supabaseUrl && env.supabaseKey
   ? createClient(env.supabaseUrl, env.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
 export const modo = supa ? "supabase" : "arquivo";
+if (SERVERLESS && !supa) throw new Error("Na Vercel o hub precisa do Supabase: defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.");
 export const supabase = supa;
 
 export const agora = () => new Date().toISOString();
@@ -40,9 +46,54 @@ export function salvar() {
   else gravarArquivoJson();
 }
 
-export function proximoCodigo() {
+// Com Supabase o código vem da sequence do banco, para duas instâncias nunca darem o mesmo número.
+let avisoCodigo = false;
+export async function proximoCodigo() {
+  if (supa) {
+    const { data, error } = await supa.rpc("proximo_codigo_orcamento");
+    if (!error && data) return data;
+    if (!avisoCodigo) {
+      avisoCodigo = true;
+      console.warn(`Código pelo banco indisponível (${error?.message}); aplique a migration 20261108120000_codigo_pelo_banco.sql. Usando o contador em memória.`);
+    }
+  }
   db.seq += 1;
   return "ORC-" + String(db.seq).padStart(4, "0");
+}
+
+// ---------- Serverless: recarga por requisição e tarefas depois da resposta ----------
+
+// Orçamentos que uma tarefa em segundo plano (cálculo da IA) ainda está mexendo nesta instância.
+// Numa recarga eles substituem a cópia lida do banco, para o resultado do cálculo não se perder.
+const segurados = new Map();
+let carregadoEm = 0;
+
+export async function recarregar() {
+  if (!supa || Date.now() - carregadoEm < 1000) return;
+  await fila;
+  const dados = await carregarSupabase();
+  dados.orcamentos = dados.orcamentos.map((o) => segurados.get(o.id) ?? o);
+  db = dados;
+  carregadoEm = Date.now();
+}
+
+// Roda `fn` mantendo o orçamento vivo nesta instância até terminar, e grava no fim.
+export function segurar(orc, fn) {
+  if (orc) segurados.set(orc.id, orc);
+  let p;
+  try { p = Promise.resolve(fn()); } catch (e) { p = Promise.reject(e); }
+  return p.finally(() => {
+    if (orc && segurados.get(orc.id) === orc) segurados.delete(orc.id);
+    salvar();
+  });
+}
+
+// Na Vercel, mantém a função viva até a tarefa (e as gravações dela) terminar, mesmo depois da resposta.
+let waitUntil = null;
+if (SERVERLESS) ({ waitUntil } = await import("@vercel/functions"));
+export function depoisDaResposta(promessa) {
+  const tudo = promessa.catch(() => {}).then(() => aguardarGravacoes());
+  if (waitUntil) waitUntil(tudo);
 }
 
 export const orcamentos = () => db.orcamentos;
@@ -241,7 +292,9 @@ async function carregarSupabase() {
   };
   dados.seq = Math.max(0, ...dados.orcamentos.map((o) => Number(o.codigo.replace(/\D/g, "")) || 0));
 
-  // O que veio do banco já está gravado.
+  // O que veio do banco já está gravado. (Os itens das listas ficam no WeakSet: os já gravados continuam marcados.)
+  gravado.orcamentos.clear();
+  gravado.notificacoes.clear();
   for (const o of dados.orcamentos) {
     gravado.orcamentos.set(o.id, JSON.stringify(linhaOrcamento(o)));
     for (const campo of Object.keys(FILHOS)) for (const x of o[campo]) gravado.itens.add(x);
@@ -249,7 +302,7 @@ async function carregarSupabase() {
   for (const n of dados.notificacoes) gravado.notificacoes.set(n.id, JSON.stringify(linhaNotificacao(n)));
   for (const s of dados.saidaWhatsapp) gravado.itens.add(s);
 
-  console.log(`Supabase: ${dados.orcamentos.length} orçamento(s) carregado(s).`);
+  if (!SERVERLESS) console.log(`Supabase: ${dados.orcamentos.length} orçamento(s) carregado(s).`);
   return dados;
 }
 
@@ -274,7 +327,7 @@ async function sincronizar() {
   // Tudo é lido de uma vez aqui, antes de qualquer await: o que mudar durante a gravação
   // fica para a próxima rodada (que o próprio salvar() já agendou).
   const trabalhos = [];
-  for (const o of db.orcamentos) {
+  for (const o of new Set([...db.orcamentos, ...segurados.values()])) {
     const linha = linhaOrcamento(o);
     const json = JSON.stringify(linha);
     const novos = [];
@@ -345,3 +398,4 @@ export async function aguardarGravacoes() {
 // ---------- Carga inicial (no fim: usa as funções e constantes acima) ----------
 
 let db = supa ? await carregarSupabase() : lerArquivoJson();
+carregadoEm = Date.now();

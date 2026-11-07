@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import PDFDocument from "pdfkit";
 import { config } from "./config.js";
-import { DATA_DIR, UPLOADS_DIR } from "./store.js";
+import { UPLOADS_DIR } from "./store.js";
 
 const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const unid = (u, q) => (Number(q) === 1 || ["un", "km", "m²"].includes(u) ? u : u + "s");
@@ -21,7 +21,7 @@ const NUDE = "#DDBBA8";
 
 // Logo fica no repositório; fotos de atendimento (com clientes) ficam fora dele, em data/marca/.
 const LOGO = path.resolve("config", "marca", "logo.png");
-const PASTA_FOTOS = path.join(DATA_DIR, "marca");
+const PASTA_FOTOS = path.resolve("data", "marca");
 const existe = (f) => { try { return fs.statSync(f).isFile(); } catch { return false; } };
 const fotosDaMarca = () => {
   try {

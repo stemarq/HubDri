@@ -1,0 +1,10 @@
+# Nunca sobe para a Vercel: segredos, dados locais, o agente (roda em outro lugar) e o PDF com fotos de clientes.
+.env
+.env.*
+!.env.example
+data
+agente
+precificacao-lab
+scripts
+CONTEXTO.md
+*.pdf

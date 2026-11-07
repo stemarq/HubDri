@@ -17,6 +17,7 @@
     "@anthropic-ai/sdk": "^1.6.0",
     "@google/genai": "^1.52.0",
     "@supabase/supabase-js": "^2.119.0",
+    "@vercel/functions": "^2.2.13",
     "express": "^4.21.2",
     "pdfkit": "^0.15.2"
   }
