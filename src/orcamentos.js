@@ -4,7 +4,7 @@ import * as store from "./store.js";
 import { agora, novoId, salvar, notificar } from "./store.js";
 import { config, env } from "./config.js";
 import { montarCalculo, propostaPorRegras, recalcularTotais } from "./calculo.js";
-import { iaDisponivel, proporOrcamento } from "./ia.js";
+import { iaDisponivel, iaNome, proporOrcamento } from "./ia.js";
 import { enviarParaWhatsapp } from "./whatsapp.js";
 
 export const STATUS = {
@@ -146,6 +146,7 @@ export async function calcular(id, pedidoDeMudanca = null) {
   salvar();
 
   let proposta, geradoPor = "regras", erroIa = null;
+  const nomeIa = iaNome();
   if (iaDisponivel()) {
     try {
       proposta = await proporOrcamento(orc, cfg, pedidoDeMudanca);
@@ -160,10 +161,11 @@ export async function calcular(id, pedidoDeMudanca = null) {
     proposta.pontosDeAtencao.push(`Mudança pedida: "${pedidoDeMudanca}". O cálculo por regras não interpreta texto livre: ajuste os itens manualmente.`);
 
   orc.calculo = montarCalculo(proposta, cfg, geradoPor);
+  if (geradoPor === "ia") orc.calculo.ia = nomeIa;
   if (!orc.briefing.resumo && proposta.resumo) orc.briefing.resumo = proposta.resumo;
   limparAprovacao(orc);
   orc.status = "aguardando_aprovacao";
-  historico(orc, "Orçamento calculado", `${geradoPor === "ia" ? "IA" : "Regras"} · total R$ ${orc.calculo.total.toFixed(2)}`);
+  historico(orc, "Orçamento calculado", `${geradoPor === "ia" ? `IA (${nomeIa})` : "Regras"} · total R$ ${orc.calculo.total.toFixed(2)}`);
   salvar();
   return orc;
 }

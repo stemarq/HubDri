@@ -1,6 +1,6 @@
 # HubDri
 
-Hub de captação de clientes. A IA do WhatsApp coleta os dados da cliente e envia para o hub; o hub calcula o orçamento (com Claude), gera o PDF e, com um clique de aprovação, devolve o PDF para a IA do WhatsApp continuar a conversa.
+Hub de captação de clientes. A IA do WhatsApp coleta os dados da cliente e envia para o hub; o hub calcula o orçamento (com Gemini ou Claude), gera o PDF e, com um clique de aprovação, devolve o PDF para a IA do WhatsApp continuar a conversa.
 
 ```
 WhatsApp (IA) ──lead──▶ Hub ──▶ cálculo (IA/regras) ──▶ aprovação (botão único)
@@ -95,7 +95,15 @@ O retorno **não** traz link para a cliente pedir alterações — só `linkApro
 
 `config/hub.config.json` define o catálogo de preços, validade, desconto máximo e as instruções para a IA. **Os preços do catálogo são de exemplo — troque pelos valores reais.**
 
-Com `ANTHROPIC_API_KEY`, o Claude (`claude-opus-5-5`) lê o briefing, os dados do evento, a conversa e até 6 fotos (referências de make) e escolhe **apenas códigos e quantidades** do catálogo; os valores e totais são sempre calculados pelo hub. Sem chave (ou se a IA falhar), entra o cálculo por regras (noiva, nº de pessoas, penteado, cílios, horário antes das 7h, km) com um aviso para revisar.
+Com `GEMINI_API_KEY` (Gemini, modelo `gemini-3.6-flash`, trocável em `GEMINI_MODEL`) ou `ANTHROPIC_API_KEY` (Claude, `claude-opus-5-5`), a IA lê o briefing, os dados do evento, a conversa e até 6 fotos (referências de make) e escolhe **apenas códigos e quantidades** do catálogo; os valores e totais são sempre calculados pelo hub. Sem chave (ou se a IA falhar), entra o cálculo por regras (noiva, nº de pessoas, penteado, cílios, horário antes das 7h, km) com um aviso para revisar.
+
+### Qual IA
+
+- **Escolha do provedor:** com só uma chave no `.env`, vale aquela. Com as duas, o Gemini tem preferência, a menos que `IA_PROVEDOR=claude` diga o contrário. `IA_DESATIVADA=1` força o cálculo por regras.
+- **Onde aparece:** ao iniciar, o hub mostra no terminal qual IA está em uso. No orçamento aparece "Gerado pela IA (Gemini)".
+- **Sobrecarga do Gemini:** quando o Google devolve sobrecarga ou limite de uso (HTTP 429/5xx), o hub tenta de novo e depois usa o modelo reserva `gemini-3.5-flash-lite`, trocável em `GEMINI_MODELO_RESERVA` (`nenhum` desliga). Se ainda assim falhar, calcula pelas regras.
+- **Mesmo comportamento nos dois:** mesmo formato de resposta, as mesmas travas (só códigos do catálogo, desconto até o máximo configurado) e a mesma volta para as regras se a IA falhar, bloquear ou demorar demais.
+- **Privacidade (Gemini):** no plano gratuito do Google AI Studio, o Google pode usar o conteúdo enviado (conversa, fotos, nome e telefone das clientes) para melhorar os produtos dele. Para uso real, ative o faturamento (plano pago).
 
 ## Visual
 
