@@ -11,7 +11,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export interface InboundInput {
-  waId: string; name?: string; channel: 'SIMULATOR' | 'WHATSAPP'; type: 'text' | 'image' | 'audio' | 'other';
+  waId: string; name?: string; channel: 'SIMULATOR' | 'WHATSAPP' | 'TELEGRAM'; type: 'text' | 'image' | 'audio' | 'other';
   text?: string; waMessageId?: string; mediaPath?: string; mediaId?: string;
 }
 export interface InboundResult { conversationId: string; duplicate: boolean; mode: string; replies: string[]; quoteId?: string; sendErrors?: string[] }

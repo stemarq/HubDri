@@ -7,6 +7,7 @@ export interface Config {
   baseAddress?: string;
   whatsapp: { phoneNumberId?: string; accessToken?: string; appSecret?: string; verifyToken?: string; apiVersion: string };
   google: { mapsApiKey?: string; calendarId?: string; clientId?: string; clientSecret?: string; refreshToken?: string };
+  telegram: { botToken?: string; allowedChatIds: string[] };
   hubWebhookUrl?: string;
   hubWebhookSecret?: string;
   chromePath?: string;
@@ -35,6 +36,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       clientSecret: env.GOOGLE_CLIENT_SECRET || undefined,
       refreshToken: env.GOOGLE_REFRESH_TOKEN || undefined,
     },
+    telegram: { botToken: env.TELEGRAM_BOT_TOKEN || undefined, allowedChatIds: (env.TELEGRAM_ALLOWED_CHAT_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean) },
     hubWebhookUrl: env.HUB_WEBHOOK_URL || undefined,
     hubWebhookSecret: env.HUB_WEBHOOK_SECRET || undefined,
     chromePath: env.CHROME_PATH || undefined,

@@ -34,9 +34,10 @@ export function parseWebhook(payload: any): InboundMessage[] {
   return out;
 }
 
-export interface SendResult { messageId: string; status: string; channel: 'SIMULATOR' | 'WHATSAPP'; simulated: boolean; error?: string }
+export interface SendResult { messageId: string; status: string; channel: 'SIMULATOR' | 'WHATSAPP' | 'TELEGRAM'; simulated: boolean; error?: string }
 export class WhatsAppError extends Error { constructor(public code: string, msg?: string) { super(msg ?? code); } }
 
+export const tgChat = (waId: string) => waId.replace(/^tg:/, '');
 const WINDOW_MS = 24 * 3600 * 1000;
 
 export class OutboundService {
@@ -68,6 +69,7 @@ export class OutboundService {
     const c = this.conv(conversationId);
     const id = this.record(conversationId, 'text', text, 'PENDING', opts.author ?? 'ADRI', opts.idemKey);
     if (c.channel === 'SIMULATOR') { this.finish(id, 'SIMULATED_DELIVERED', 0); return { messageId: id, status: 'SIMULATED_DELIVERED', channel: 'SIMULATOR', simulated: true }; }
+    if (c.channel === 'TELEGRAM') return this.telegram(id, () => this.tg('sendMessage', { chat_id: tgChat(c.wa_id), text }));
     if (!whatsappConfigured(this.cfg)) { this.finish(id, 'FAILED', 0, 'WHATSAPP_NOT_CONFIGURED'); throw new WhatsAppError('WHATSAPP_NOT_CONFIGURED'); }
     if (this.now().getTime() - (c.last_inbound_at ?? 0) > WINDOW_MS) {
       this.finish(id, 'BLOCKED_WINDOW', 0, 'Fora da janela de 24h: só template aprovado pode ser enviado');
@@ -82,6 +84,15 @@ export class OutboundService {
     const filename = `Proposta-${basename(pdfPath)}`;
     const id = this.record(conversationId, 'document', caption, 'PENDING', opts.author ?? 'ADRIANA', opts.idemKey, pdfPath);
     if (c.channel === 'SIMULATOR') { this.finish(id, 'SIMULATED_DELIVERED', 0); return { messageId: id, status: 'SIMULATED_DELIVERED', channel: 'SIMULATOR', simulated: true }; }
+    if (c.channel === 'TELEGRAM') {
+      return this.telegram(id, () => {
+        const form = new FormData();
+        form.append('chat_id', tgChat(c.wa_id));
+        form.append('caption', caption);
+        form.append('document', new Blob([readFileSync(pdfPath)], { type: 'application/pdf' }), filename);
+        return this.tg('sendDocument', form);
+      });
+    }
     if (!whatsappConfigured(this.cfg)) { this.finish(id, 'FAILED', 0, 'WHATSAPP_NOT_CONFIGURED'); throw new WhatsAppError('WHATSAPP_NOT_CONFIGURED'); }
     const inWindow = this.now().getTime() - (c.last_inbound_at ?? 0) <= WINDOW_MS;
     const tpl = getSetting(this.db, 'whatsapp');
@@ -95,6 +106,20 @@ export class OutboundService {
       return this.post({ messaging_product: 'whatsapp', to: c.wa_id, type: 'template', template: { name: tpl.quoteTemplateName, language: { code: tpl.quoteTemplateLang },
         components: [{ type: 'header', parameters: [{ type: 'document', document: { id: mediaId, filename } }] }, { type: 'body', parameters: [{ type: 'text', text: c.name ?? 'cliente' }] }] } });
     });
+  }
+
+  /** Canal Telegram = simulação do chat (sem janela de 24h nem templates). */
+  private async telegram(id: string, fn: () => Promise<unknown>): Promise<SendResult> {
+    if (!this.cfg.telegram.botToken) { this.finish(id, 'FAILED', 0, 'TELEGRAM_NOT_CONFIGURED'); throw new WhatsAppError('TELEGRAM_NOT_CONFIGURED'); }
+    const r = await this.deliver(id, fn);
+    return { ...r, channel: 'TELEGRAM', simulated: true };
+  }
+  private async tg(method: string, payload: Record<string, unknown> | FormData) {
+    const isForm = payload instanceof FormData;
+    const res = await this.fetchFn(`https://api.telegram.org/bot${this.cfg.telegram.botToken}/${method}`, {
+      method: 'POST', headers: isForm ? undefined : { 'Content-Type': 'application/json' }, body: isForm ? payload : JSON.stringify(payload), signal: AbortSignal.timeout(20_000) });
+    if (!res.ok) { const e: any = new Error(`Telegram API ${res.status}`); e.permanent = res.status < 500 && res.status !== 429; throw e; }
+    return res.json();
   }
 
   private async deliver(id: string, fn: () => Promise<any>): Promise<SendResult> {

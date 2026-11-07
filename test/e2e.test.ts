@@ -5,6 +5,7 @@ import { createApp } from '../src/app.js';
 import { Ctx } from '../src/context.js';
 import { RouteError, RouteProvider } from '../src/services/transport.js';
 import { all, one } from '../src/db.js';
+import * as Q from '../src/services/quotes.js';
 import { SAT, busy, chat, makeCtx } from './helpers.js';
 
 const servers: { close(): void }[] = [];
@@ -363,5 +364,34 @@ describe('endpoints de apoio ao hub', () => {
     expect(trip.status).toBe(201);
     const tr = (await api('GET', '/api/analytics/transportation')).json;
     expect(tr.realTripsRecorded).toBe(1); expect(tr.averageDifferenceCents).toBe(300);
+  });
+});
+
+describe('canal Telegram (simulação)', () => {
+  it('recebe update, responde via sendMessage e envia o PDF aprovado via sendDocument', async () => {
+    const calls: { method: string; body: any }[] = [];
+    let updates: any[] = [];
+    const fetchFn = (async (url: string, init?: any) => {
+      const method = String(url).split('/').pop()!.split('?')[0];
+      if (method === 'getUpdates') { const r = updates; updates = []; return new Response(JSON.stringify({ ok: true, result: r })); }
+      calls.push({ method, body: init?.body instanceof FormData ? Object.fromEntries((init.body as FormData).entries()) : JSON.parse(init.body) });
+      return new Response(JSON.stringify({ ok: true }));
+    }) as unknown as typeof fetch;
+    const { ctx } = makeCtx({ env: { TELEGRAM_BOT_TOKEN: 'T0K', TELEGRAM_ALLOWED_CHAT_IDS: '77' }, fetchFn });
+    const { TelegramPoller } = await import('../src/services/telegram.js');
+    const poller = new TelegramPoller(ctx, fetchFn, 0);
+    const msg = (id: number, chat: number, text: string) => ({ update_id: id, message: { chat: { id: chat }, from: { first_name: 'Maria' }, text } });
+    updates = [msg(1, 77, DEMO), msg(2, 99, 'intruso'), msg(1, 77, DEMO)];
+    expect(await poller.pollOnce()).toBe(2); // chat 99 bloqueado; update repetido deduplicado
+    expect(calls.filter((c) => c.method === 'sendMessage')).toHaveLength(1);
+    expect(calls[0].body.chat_id).toBe('77');
+    updates = [msg(3, 77, 'sim'), msg(4, 77, ADDRESS)];
+    await poller.pollOnce();
+    const q = one(ctx.db, 'SELECT id FROM quotes')!;
+    Q.approve(ctx, q.id as string, 'adriana');
+    const s = await Q.sendQuote(ctx, q.id as string, 'adriana');
+    expect(s.delivery).toMatchObject({ channel: 'TELEGRAM', simulated: true });
+    expect(calls.at(-1)!.method).toBe('sendDocument');
+    expect(one(ctx.db, 'SELECT channel FROM conversations')!.channel).toBe('TELEGRAM');
   });
 });

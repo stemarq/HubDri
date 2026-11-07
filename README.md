@@ -27,6 +27,14 @@ Requer Node 22.13+ (usa `node:sqlite`) e Chrome ou Edge instalado (PDF por HTML/
 
 A compreensão do texto é por regras, não por LLM: é previsível e testável, e a injeção de prompt não consegue alterar preços (a mensagem da cliente nunca chega ao PricingEngine). Dá para plugar um LLM no mesmo contrato `extract()` depois.
 
+## Chat no Telegram (simulação do WhatsApp)
+
+1. No Telegram, fale com @BotFather, `/newbot`, e copie o token.
+2. No `.env`: `TELEGRAM_BOT_TOKEN=...` (opcional `TELEGRAM_ALLOWED_CHAT_IDS=` para restringir quem fala com o bot).
+3. `npm start`: o bot passa a receber mensagens por long polling (sem URL pública, sem ngrok).
+
+É o mesmo agente, a mesma agenda e o mesmo hub. A cliente conversa no Telegram e a Adriana aprova no simulador (`/simulator`) ou pela API; ao enviar, o PDF chega no chat como documento. O canal aparece como `TELEGRAM` e `simulated: true`; não há janela de 24h nem template. Fotos são guardadas como inspiração; áudio recebe aviso de que não é transcrito.
+
 ## Regras que o sistema garante
 
 - Preço só sai do `PricingEngine` (centavos inteiros, regras no banco). Regra ausente vira `NEEDS_REVIEW`, nunca valor inventado. Não há preços reais cadastrados: o `seed:demo` é fictício.
