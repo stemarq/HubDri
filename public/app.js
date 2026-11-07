@@ -35,8 +35,55 @@ function avisar(msg) {
   avisar.t = setTimeout(() => (el.hidden = true), 4000);
 }
 
-const lerNome = () => { try { return localStorage.getItem("hub.nome") || ""; } catch { return ""; } };
-const gravarNome = (v) => { try { localStorage.setItem("hub.nome", v); } catch {} };
+// ---------- Dropdown personalizado ----------
+// Botão + lista (role="listbox"), navegável por teclado. Substitui o <select> nativo.
+
+const CHEVRON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+
+function dropdown({ id, rotulo, placeholder, opcoes }) {
+  return `
+    <div class="dropdown" id="${id}">
+      <span class="label" id="${id}-rotulo">${esc(rotulo)}</span>
+      <button type="button" class="dropdown-botao" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="${id}-rotulo ${id}-valor">
+        <span id="${id}-valor">${esc(placeholder)}</span>${CHEVRON}
+      </button>
+      <ul class="dropdown-lista" role="listbox" aria-labelledby="${id}-rotulo" tabindex="-1" hidden>
+        ${opcoes.map((op) => `
+          <li role="option" data-valor="${esc(op.valor)}" aria-selected="false">
+            <span>${esc(op.titulo)}</span>${op.detalhe ? `<span class="dropdown-detalhe">${esc(op.detalhe)}</span>` : ""}
+          </li>`).join("")}
+      </ul>
+    </div>`;
+}
+
+function ligarDropdown(el, aoEscolher) {
+  const botao = $(".dropdown-botao", el), lista = $(".dropdown-lista", el);
+  const itens = [...lista.querySelectorAll("[role=option]")];
+  let ativo = -1;
+
+  const marcar = (i) => {
+    ativo = (i + itens.length) % itens.length;
+    itens.forEach((li, j) => li.classList.toggle("ativo", j === ativo));
+    itens[ativo].scrollIntoView({ block: "nearest" });
+  };
+  const abrir = () => { lista.hidden = false; botao.setAttribute("aria-expanded", "true"); lista.focus(); marcar(0); };
+  const fechar = (focar = true) => { lista.hidden = true; botao.setAttribute("aria-expanded", "false"); if (focar) botao.focus(); };
+  const escolher = (i) => { fechar(); aoEscolher(itens[i].dataset.valor); };
+
+  botao.addEventListener("click", () => (lista.hidden ? abrir() : fechar()));
+  botao.addEventListener("keydown", (e) => { if (e.key === "ArrowDown") { e.preventDefault(); abrir(); } });
+  lista.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); marcar(ativo + 1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); marcar(ativo - 1); }
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); escolher(ativo); }
+    else if (e.key === "Escape" || e.key === "Tab") fechar(e.key === "Escape");
+  });
+  itens.forEach((li, i) => {
+    li.addEventListener("click", () => escolher(i));
+    li.addEventListener("mousemove", () => ativo !== i && marcar(i));
+  });
+  document.addEventListener("click", (e) => { if (!el.contains(e.target) && !lista.hidden) fechar(false); });
+}
 
 let meta;
 let filtroAtual = "pendentes";
@@ -296,8 +343,12 @@ function blocoCalculo(o, podeAgir) {
     <ul class="itens">${linhas || `<li class="muted">Nenhum item.</li>`}</ul>
     ${editando ? `
       <div class="barra-edicao">
-        <label><span class="label">Adicionar item</span>
-          <select id="add-item"><option value="">Escolha um serviço…</option>${meta.catalogo.map((x) => `<option value="${x.codigo}">${esc(x.descricao)} — ${brl(x.valor)}/${x.unidade}</option>`).join("")}</select></label>
+        ${dropdown({
+          id: "add-item",
+          rotulo: "Adicionar serviço",
+          placeholder: "Escolha um serviço…",
+          opcoes: meta.catalogo.map((x) => ({ valor: x.codigo, titulo: x.descricao, detalhe: `${brl(x.valor)} / ${x.unidade}` })),
+        })}
         <label><span class="label">Desconto % (máx. ${meta.descontoMaximo})</span><input type="number" inputmode="decimal" id="desconto" min="0" max="${meta.descontoMaximo}" value="${desc || 0}"></label>
       </div>` : ""}
     <div class="totais">
@@ -360,10 +411,11 @@ function ligarAcoesDetalhe(o) {
     app.querySelectorAll("[data-remover]").forEach((b) =>
       b.addEventListener("click", () => { edicao.itens.splice(Number(b.dataset.remover), 1); render(); })
     );
-    $("#add-item").addEventListener("change", (e) => {
-      const cat = meta.catalogo.find((x) => x.codigo === e.target.value);
+    ligarDropdown($("#add-item"), async (codigo) => {
+      const cat = meta.catalogo.find((x) => x.codigo === codigo);
       if (cat) edicao.itens.push({ codigo: cat.codigo, descricao: cat.descricao, unidade: cat.unidade, quantidade: 1, valorUnitario: cat.valor, observacao: "" });
-      render();
+      await render();
+      $("#add-item .dropdown-botao")?.focus({ preventScroll: true }); // mantém o foco após redesenhar
     });
     $("#desconto").addEventListener("change", (e) => { edicao.descontoPercentual = Number(e.target.value) || 0; render(); });
     $("#salvar-edicao").addEventListener("click", () => {
@@ -418,7 +470,7 @@ window.addEventListener("hashchange", () => { edicao = null; render(); window.sc
 async function ciclo() {
   await carregarNotificacoes().catch(() => {});
   const [, tela] = (location.hash || "#/fila").split("/");
-  const digitando = document.activeElement?.matches("input, textarea, select");
+  const digitando = document.activeElement?.matches("input, textarea, select, .dropdown *");
   if (digitando || edicao) return;
   if (tela === "fila" || !tela) telaFila().catch(() => {});
   else if (tela === "orcamento" && atualOrc && ["calculando", "enviando"].includes(atualOrc.status)) render();

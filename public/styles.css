@@ -142,6 +142,30 @@ h2 .label { font-size: 11px; }
 .totais .final .label { color: var(--primary-fg); opacity: 0.85; }
 .barra-edicao { display: grid; gap: 10px; margin-top: 14px; }
 .barra-edicao label { display: grid; gap: 4px; }
+
+/* Dropdown personalizado */
+.dropdown { position: relative; display: grid; gap: 4px; }
+.dropdown-botao {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+  min-height: 46px; padding: 0 14px; text-align: left; font-size: 16px; cursor: pointer;
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface);
+}
+.dropdown-botao:hover, .dropdown-botao[aria-expanded="true"] { border-color: var(--primary); }
+.dropdown-botao svg { flex: none; color: var(--primary); }
+.dropdown-botao[aria-expanded="true"] svg { transform: rotate(180deg); }
+.dropdown-lista {
+  position: absolute; z-index: 25; top: calc(100% + 6px); left: 0; right: 0;
+  margin: 0; padding: 6px; list-style: none; max-height: 300px; overflow: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  box-shadow: 0 12px 40px rgba(58, 42, 35, 0.14);
+}
+.dropdown-lista:focus { outline: none; }
+.dropdown-lista li {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 11px 12px; border-radius: var(--r-sm); cursor: pointer;
+}
+.dropdown-lista li.ativo { background: var(--creme); color: var(--primary); }
+.dropdown-detalhe { font: 500 12px var(--mono); color: var(--muted); white-space: nowrap; }
 .botoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .atencao { margin-top: 14px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--creme); border: 1px dashed var(--nude); font-size: 14px; }
 .atencao ul { margin: 6px 0 0; padding-left: 18px; }
