@@ -245,7 +245,7 @@ export async function enviar(id) {
       telefone: orc.cliente.telefone,
       cliente: orc.cliente.nome,
       total: orc.calculo.total,
-      evento: orc.evento,
+      dadosEvento: orc.evento,
       validadeDias: orc.calculo.validadeDias,
       pdfUrl: linkPdf(orc),
       linkAprovacao: linkPublico(orc),

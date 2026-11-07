@@ -59,7 +59,7 @@ O hub faz `POST` (header `x-hub-token: $WHATSAPP_CALLBACK_TOKEN`) com:
   "orcamentoId": "…", "codigo": "ORC-0001",
   "conversationId": "wa-123", "telefone": "+55…", "cliente": "Mariana Lopes",
   "total": 1890, "validadeDias": 7,
-  "evento": { "tipo": "Casamento", "data": "12/12/2026", "horario": "06:00", "local": "Campinas/SP" },
+  "dadosEvento": { "tipo": "Casamento", "data": "12/12/2026", "horario": "06:00", "local": "Campinas/SP" },
   "pdfUrl": "https://hub/p/<token>/orcamento.pdf",
   "linkAprovacao": "https://hub/p/<token>",
   "mensagemSugerida": "Oi Mariana! Seu orçamento ORC-0001 está pronto…"
