@@ -163,3 +163,16 @@ describe('assinatura do webhook', () => {
   });
 });
 void NOW;
+
+describe('respostas curtas e endereços reais', () => {
+  it('"3 da manhã" e número solto respondem "que horas"', () => {
+    expect(extract('3 da manhã', NOW, 'ready').readyMin).toBe(180);
+    expect(extract('3', NOW, 'ready').readyMin).toBe(180);
+    expect(extract('7 da noite', NOW, 'ready').readyMin).toBe(19 * 60);
+  });
+  it('endereço com abreviações e complemento', () => {
+    const e = extract('rua m.m.dc. 80 ap:910 em casa', NOW, 'ready');
+    expect(e.address?.full).toBe(true);
+    expect(e.readyMin).toBeUndefined();
+  });
+});

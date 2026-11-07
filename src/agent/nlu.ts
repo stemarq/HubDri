@@ -95,13 +95,14 @@ function toMinutes(h: number, mi: number, period?: string): number | undefined {
 export function parseTimes(text: string): TimeMention[] {
   const t = norm(text);
   const out: TimeMention[] = [];
-  const re = /(?:\bas?\s+)?\b(\d{1,2})\s*(?:h(?:oras?)?|:)\s*(\d{2})?\b(?:\s*(?:da|de)\s*(manha|tarde|noite|madrugada))?|\bas\s+(\d{1,2})(?!\d|\s*(?:de\s+\w+|\/))(?:\s*(?:da|de)\s*(manha|tarde|noite|madrugada))?|\bmeio[- ]dia\b/g;
+  const re = /(?:\bas?\s+)?\b(\d{1,2})\s*(?:h(?:oras?)?|:)\s*(\d{2})?\b(?:\s*(?:da|de)\s*(manha|tarde|noite|madrugada))?|\bas\s+(\d{1,2})(?!\d|\s*(?:de\s+\w+|\/))(?:\s*(?:da|de)\s*(manha|tarde|noite|madrugada))?|\b(\d{1,2})\s+(?:da|de)\s+(manha|tarde|noite|madrugada)\b|\bmeio[- ]dia\b/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(t))) {
     let min: number | undefined;
     if (m[0].includes('meio')) min = 12 * 60;
     else if (m[1] !== undefined) min = toMinutes(+m[1], m[2] ? +m[2] : 0, m[3]);
     else if (m[4] !== undefined) min = toMinutes(+m[4], 0, m[5]);
+    else if (m[6] !== undefined) min = toMinutes(+m[6], 0, m[7]);
     if (min === undefined) continue;
     const ctx = t.slice(Math.max(0, m.index - 45), m.index + m[0].length);
     out.push({ min, ctx });
@@ -119,6 +120,10 @@ export function classifyTimes(text: string, awaiting?: string): Pick<Extracted, 
     else if (/arrum|maquiar|me produzir|comecar a|iniciar|atendimento|chegar/.test(clause)) r.desiredStartMin = min;
     else if (/evento|cerimonia|festa|casamento|formatura|comeca|inicio|inicia|missa|culto|jantar|almoco/.test(clause)) r.eventStartMin = min;
     else if (awaiting === 'ready' && times.length === 1) r.readyMin = min;
+  }
+  if (awaiting === 'ready' && times.length === 0) {
+    const bare = norm(text).match(/^\s*(?:as\s+)?(\d{1,2})(?::(\d{2}))?\s*$/);
+    if (bare) { const v = toMinutes(+bare[1], bare[2] ? +bare[2] : 0); if (v !== undefined) r.readyMin = v; }
   }
   return r;
 }
@@ -159,7 +164,7 @@ export function extract(text: string, now: Date, awaiting?: string): Extracted {
   // Endereço
   const street = text.match(/\b(rua|r\.|avenida|av\.?|alameda|al\.|travessa|estrada|rodovia|pra[cç]a)\s+[^,;\n]+/i);
   const cep = /\b\d{5}-?\d{3}\b/.test(text);
-  const streetTail = street ? text.slice(street.index).split(/[.!?](?:\s|$)/)[0].slice(0, 200) : '';
+  const streetTail = street ? text.slice(street.index, street.index + 200) : '';
   if (street && (/\d{1,5}/.test(streetTail) || cep)) e.address = { raw: streetTail.trim(), full: true };
   else if (awaiting === 'address' && /\d/.test(text) && text.trim().length > 8) e.address = { raw: text.trim().slice(0, 200), full: true };
   for (const n of NEIGHBORHOODS) if (t.includes(norm(n))) { e.neighborhood = n; break; }
