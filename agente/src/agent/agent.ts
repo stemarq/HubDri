@@ -120,7 +120,7 @@ async function process(ctx: Ctx, inp: InboundInput): Promise<InboundResult> {
 
 /** Regras + LLM opcional (validado e reconciliado). Divergências viram registro de falha para revisão humana. */
 async function interpret(ctx: Ctx, conv: Row, st: State, text: string): Promise<Extracted> {
-  const rules = extract(text, ctx.now(), st.awaiting);
+  const rules = extract(text, ctx.now(), st.awaiting, st.askedKeys);
   if (!ctx.llm || text.trim().length < 4) return rules;
   const today = epochToLocal(ctx.now().getTime());
   const history = all(ctx.db, 'SELECT direction, body FROM messages WHERE conversation_id=? AND type=? ORDER BY created_at DESC, rowid DESC LIMIT 7', conv.id, 'text')
