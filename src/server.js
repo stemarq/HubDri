@@ -6,7 +6,7 @@ import { config, env } from "./config.js";
 import * as fluxo from "./orcamentos.js";
 import { STATUS, PENDENTES, ErroFluxo } from "./orcamentos.js";
 import { gerarPdf } from "./pdf.js";
-import { iaDisponivel } from "./ia.js";
+import { iaDisponivel, iaNome, situacaoIa } from "./ia.js";
 import { leadExemplo } from "./simulador.js";
 import { paginaCliente } from "./pagina-cliente.js";
 import { loginAtivo, exigirLogin, rotasDeAcesso } from "./auth.js";
@@ -138,6 +138,7 @@ app.get("/api/meta", (req, res) => {
     descontoMaximo: cfg.descontoMaximoPercentual,
     atrasoHoras: cfg.atrasoHoras,
     iaDisponivel: iaDisponivel(),
+    ia: iaNome(),
     whatsappSimulado: !env.callbackUrl,
     simuladorAtivo: !env.producao,
     usuario: req.usuario ?? null,
@@ -209,7 +210,7 @@ const servidor = app.listen(env.port, () => {
   console.log(`HubDri rodando em ${env.publicUrl} · dados: ${store.modo === "supabase" ? "Supabase" : "data/db.json"}`);
   if (!env.webhookToken) console.warn("! HUB_WEBHOOK_TOKEN vazio: webhooks aceitam qualquer chamada.");
   if (!env.callbackUrl) console.warn("! WHATSAPP_CALLBACK_URL vazio: retorno ao WhatsApp em modo simulado.");
-  if (!iaDisponivel()) console.warn("! Sem ANTHROPIC_API_KEY: orçamentos calculados por regras.");
+  (iaDisponivel() ? console.log : console.warn)((iaDisponivel() ? "" : "! ") + situacaoIa());
 });
 
 // Ao desligar, termina as gravações pendentes no Supabase antes de sair.
