@@ -16,3 +16,18 @@ section { margin-top: 20px; padding: 20px; background: var(--surface); border: 1
 .acoes .btn { width: 100%; min-height: 52px; font-size: 15px; }
 .dica { color: var(--muted); font-size: 14px; margin: 14px 0 0; text-align: center; }
 .erro { color: var(--danger); background: var(--creme); border: 1px solid var(--danger); padding: 10px 14px; border-radius: var(--r-sm); font-size: 14px; }
+
+/* ---------- Telas de acesso (entrar, senha) ---------- */
+.acesso main { max-width: 440px; padding-top: max(20px, env(safe-area-inset-top)); }
+.acesso h1 { margin: 40px 0 20px; }
+.acesso section { margin-top: 0; }
+.acesso section > :first-child { margin-top: 0; }
+.formulario { display: grid; gap: 14px; }
+.formulario .btn { width: 100%; min-height: 52px; font-size: 15px; margin-top: 4px; }
+.campo { display: grid; gap: 6px; }
+.intro { margin: 0 0 16px; }
+.dica a { color: var(--primary); font-weight: 500; text-underline-offset: 3px; }
+.dica.esquerda { text-align: left; margin: -4px 0 0; font-size: 13px; }
+.erro, .sucesso { margin: 0 0 16px; }
+.sucesso { color: var(--cacau); background: var(--creme); border: 1px solid var(--nude); padding: 10px 14px; border-radius: var(--r-sm); font-size: 14px; }
+.acesso .acoes { margin-top: 18px; }

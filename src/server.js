@@ -9,6 +9,7 @@ import { gerarPdf } from "./pdf.js";
 import { iaDisponivel } from "./ia.js";
 import { leadExemplo } from "./simulador.js";
 import { paginaCliente } from "./pagina-cliente.js";
+import { loginAtivo, exigirLogin, rotasDeAcesso } from "./auth.js";
 
 const app = express();
 app.use(express.json({ limit: "40mb" }));
@@ -91,7 +92,9 @@ app.post("/p/:token/resposta", async (req, res) => {
   }
 });
 
-// ---------- Hub (senha opcional) ----------
+// ---------- Hub: login da equipe (Supabase) ou senha opcional (modo arquivo) ----------
+
+if (loginAtivo) rotasDeAcesso(app);
 
 function autenticar(req, res, next) {
   if (!env.hubPassword) return next();
@@ -100,7 +103,7 @@ function autenticar(req, res, next) {
   if (senha === env.hubPassword) return next();
   res.set("WWW-Authenticate", 'Basic realm="HubDri"').status(401).send("Autenticação necessária");
 }
-app.use(autenticar);
+app.use(loginAtivo ? exigirLogin : autenticar);
 app.use(express.static(path.resolve("public")));
 // Imagens do chat: só serve arquivos que pertencem a algum orçamento (vindas do Storage ou do disco).
 app.get("/uploads/:orcamento/:arquivo", rota(async (req, res) => {
@@ -137,6 +140,7 @@ app.get("/api/meta", (req, res) => {
     iaDisponivel: iaDisponivel(),
     whatsappSimulado: !env.callbackUrl,
     simuladorAtivo: !env.producao,
+    usuario: req.usuario ?? null,
   });
 });
 
@@ -169,13 +173,13 @@ app.get("/api/orcamentos/:id/pdf", rota(async (req, res) => {
 }));
 
 app.post("/api/orcamentos/:id/aprovar", rota(async (req, res) => {
-  res.json(await fluxo.aprovar(req.params.id));
+  res.json(await fluxo.aprovar(req.params.id, req.usuario));
 }));
 app.post("/api/orcamentos/:id/mudanca", rota((req, res) => {
-  res.json(fluxo.solicitarMudanca(req.params.id, req.body.comentario));
+  res.json(fluxo.solicitarMudanca(req.params.id, req.body.comentario, req.usuario));
 }));
 app.put("/api/orcamentos/:id/calculo", rota((req, res) => {
-  res.json(fluxo.editarCalculo(req.params.id, req.body));
+  res.json(fluxo.editarCalculo(req.params.id, req.body, req.usuario));
 }));
 app.post("/api/orcamentos/:id/reenviar", rota(async (req, res) => {
   res.json(await fluxo.enviar(req.params.id));
