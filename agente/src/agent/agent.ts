@@ -18,7 +18,7 @@ import { acceptAndConfirm } from '../services/hub.js';
 import type { InboundEvent } from '../channels/types.js';
 
 export interface InboundInput {
-  waId: string; name?: string; channel: 'SIMULATOR' | 'WHATSAPP' | 'TELEGRAM'; type: 'text' | 'image' | 'audio' | 'other';
+  waId: string; name?: string; handle?: string; channel: 'SIMULATOR' | 'WHATSAPP' | 'TELEGRAM'; type: 'text' | 'image' | 'audio' | 'other';
   text?: string; waMessageId?: string; mediaPath?: string; mediaId?: string;
 }
 export interface InboundResult { conversationId: string; duplicate: boolean; mode: string; replies: string[]; quoteId?: string; sendErrors?: string[] }
@@ -31,7 +31,7 @@ interface State {
 const emptyState = (): State => ({ slots: { inspirations: [] } });
 
 export const handleEvent = (ctx: Ctx, e: InboundEvent) =>
-  handleInbound(ctx, { waId: e.userId, name: e.displayName, channel: e.channel, type: e.type, text: e.text, waMessageId: e.messageId, mediaPath: e.mediaPath });
+  handleInbound(ctx, { waId: e.userId, name: e.displayName, handle: e.handle, channel: e.channel, type: e.type, text: e.text, waMessageId: e.messageId, mediaPath: e.mediaPath });
 
 const locks = new Map<string, Promise<unknown>>();
 function serialized<T>(key: string, fn: () => Promise<T>): Promise<T> {
@@ -51,6 +51,7 @@ function getOrCreateConversation(ctx: Ctx, inp: InboundInput): { conv: Row; firs
     cust = one(ctx.db, 'SELECT * FROM customers WHERE id=?', id)!;
     first = true;
   } else if (!cust.name && inp.name) run(ctx.db, 'UPDATE customers SET name=? WHERE id=?', inp.name, cust.id);
+  if (inp.handle && cust.handle !== inp.handle) run(ctx.db, 'UPDATE customers SET handle=? WHERE id=?', inp.handle, cust.id);
   let conv = one(ctx.db, 'SELECT * FROM conversations WHERE customer_id=?', cust.id);
   if (!conv) {
     const id = uid();

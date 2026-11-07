@@ -9,7 +9,7 @@ import { NEIGHBORHOODS, norm } from '../agent/nlu.js';
 import { logger } from '../lib/logger.js';
 
 export class RouteError extends Error { constructor(msg: string) { super(msg); this.name = 'RouteError'; } }
-export interface RouteResult { distanceM: number; durationS: number; source: string; simulated: boolean }
+export interface RouteResult { distanceM: number; durationS: number; source: string; simulated: boolean; /** endereço aproximado (só bairro): revisar */ approximate?: boolean }
 export interface RouteProvider { name: string; route(origin: string, destination: string, departEpoch: number): Promise<RouteResult> }
 
 const COORDS: Record<string, [number, number]> = {
@@ -85,6 +85,7 @@ const median = (a: number[]) => { const s = [...a].sort((x, y) => x - y); const 
 
 export class TransportationEstimator {
   constructor(private db: DB, private provider: RouteProvider) {}
+  get providerName() { return this.provider.name; }
 
   async estimateLeg(p: { leg: 'OUTBOUND' | 'RETURN'; origin: string; destination: string; departEpoch: number; weather?: 'rain' | 'clear' | null }): Promise<LegEstimate> {
     const s = getSetting(this.db, 'transport');
@@ -92,8 +93,11 @@ export class TransportationEstimator {
     const route = await this.provider.route(p.origin, p.destination, p.departEpoch); // RouteError propaga ao chamador
     const local = epochToLocal(p.departEpoch);
     const holiday = isHoliday(local.date, getSetting(this.db, 'pricing').holidays);
-    const km = route.distanceM / 1000, mins = route.durationS / 60;
+
     const b = bucket(local.minutes, holiday, local.weekday, s, night);
+    // Provedores sem trânsito (OSM) recebem um fator de pico na duração; o Google já considera o trânsito.
+    if (route.source.startsWith('osm') && b === 'peak') route.durationS = Math.round(route.durationS * s.peakDurationFactor);
+    const km = route.distanceM / 1000, mins = route.durationS / 60;
 
     let formula = s.baseFareCents + s.perKmCents * km + s.perMinuteCents * mins;
     const mults: Record<string, number> = {};
@@ -121,7 +125,7 @@ export class TransportationEstimator {
       ratio = Math.min(2, Math.max(0.5, median(similar.map((h) => (h.actual_cents + (h.discount_cents ?? 0)) / h.formula_cents))));
       confidence = similar.length >= 8 ? 'high' : 'medium';
     }
-    if (route.simulated && confidence === 'high') confidence = 'medium';
+    if ((route.simulated || route.approximate) && confidence === 'high') confidence = 'medium';
     let adjusted = formulaCents * ratio;
     adjusted *= 1 + s.safetyMarginPercent / 100;
     adjusted *= 1 - s.discountPercent / 100;
@@ -131,7 +135,7 @@ export class TransportationEstimator {
       leg: p.leg, origin: p.origin, destination: p.destination, departEpoch: p.departEpoch,
       distanceM: route.distanceM, durationS: route.durationS, formulaCents, predictedCents, confidence,
       source: route.source, simulated: route.simulated, similarTrips: similar.length,
-      breakdown: { bucket: b, multipliers: mults, historyRatio: ratio, safetyMarginPercent: s.safetyMarginPercent, discountPercent: s.discountPercent, routeProvider: route.source },
+      breakdown: { bucket: b, multipliers: mults, historyRatio: ratio, safetyMarginPercent: s.safetyMarginPercent, discountPercent: s.discountPercent, routeProvider: route.source, approximateAddress: !!route.approximate },
       isRealtimeUberQuote: false, disclaimer: DISCLAIMER,
     };
   }

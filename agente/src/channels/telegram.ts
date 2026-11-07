@@ -10,7 +10,7 @@ export const tgChat = (userId: string) => userId.replace(/^tg:/, '');
 
 export class TelegramAdapter implements ChannelAdapter {
   readonly name = 'TELEGRAM' as const;
-  readonly simulated = true;
+  readonly simulated = false; // entrega real pelo Telegram (não é o WhatsApp oficial)
   constructor(private cfg: Config, private fetchFn: typeof fetch = fetch) {}
   ready() { return !!this.cfg.telegram.botToken; }
   private api(m: string) { return `https://api.telegram.org/bot${this.cfg.telegram.botToken}/${m}`; }
@@ -37,7 +37,7 @@ export class TelegramAdapter implements ChannelAdapter {
     const m = u?.message;
     if (!m?.chat?.id) return;
     const displayName = [m.from?.first_name, m.from?.last_name].filter(Boolean).join(' ') || undefined;
-    const base = { channel: 'TELEGRAM' as const, userId: `tg:${m.chat.id}`, chatId: String(m.chat.id), displayName, messageId: `tg:${u.update_id}` };
+    const base = { channel: 'TELEGRAM' as const, userId: `tg:${m.chat.id}`, chatId: String(m.chat.id), displayName, handle: m.from?.username ? `@${m.from.username}` : undefined, messageId: `tg:${u.update_id}` };
     if (typeof m.text === 'string') return { ...base, type: 'text', text: m.text };
     if (m.photo?.length) return { ...base, type: 'image', text: m.caption, fileId: m.photo[m.photo.length - 1].file_id };
     if (m.voice || m.audio) return { ...base, type: 'audio', fileId: (m.voice ?? m.audio).file_id };

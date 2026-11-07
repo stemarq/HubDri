@@ -201,3 +201,9 @@ Para rodar tudo local: `npm start` na raiz (hub, `PORT`) e `npm start` dentro de
 - **Gemini no agente:** com `GEMINI_API_KEY` (a mesma do hub) a ADRI usa o Gemini para entender mensagens difíceis e **transcrever áudios de voz**. Sem a chave, segue só com regras e avisa que não ouve áudio.
 - **Entrega com `.env` vazio:** `.env` nunca vai para o Git. Na entrega, a Adriana roda `npm run env:novo` (cria `.env` e `agente/.env` vazios a partir dos modelos, sem sobrescrever os existentes) e preenche as próprias chaves.
 
+
+### Nada simulado + histórico completo
+
+- **Sem simulação por padrão.** Rotas vêm do OpenStreetMap (distância real; sem trânsito) ou do Google (`GOOGLE_MAPS_API_KEY`, com trânsito). A agenda é o Google Agenda; sem ele conectado, a ADRI **não** inventa disponibilidade: o pedido segue ao hub com o alerta e a Adriana confirma. `SIMULAR=1` existe só para testes automatizados. No hub, `NODE_ENV=production` esconde o simulador de leads.
+- **Configurações → Integrações** mostra, com checagem de verdade, o que está conectado (Telegram, WhatsApp, Google Agenda, rotas, IA, hub, banco, login, backup) e o que falta.
+- **Conversas:** todas as mensagens (cliente, ADRI, Adriana, PDFs, áudios com transcrição) ficam no banco do agente com o nome, @usuário e telefone da pessoa. No app: busca por nome/@/telefone/texto, histórico completo por dia, corrigir o nome, observações da Adriana e **Baixar conversa**. Backup diário em `data/backups/` (14 dias). O pedido apagado pela cliente ("apagar meus dados") remove o conteúdo, como previsto na LGPD.

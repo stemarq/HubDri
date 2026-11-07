@@ -24,6 +24,7 @@ export const TransportSettings = z.object({
   nightMultiplier: z.number().min(1).default(1.5),
   rainMultiplier: z.number().min(1).default(1.25),
   safetyMarginPercent: z.number().min(0).default(10),
+  peakDurationFactor: z.number().min(1).default(1.35),   // trânsito de pico quando o provedor de rotas não o considera (OSM)
   discountPercent: z.number().min(0).max(100).default(0),    // desconto autorizado (cupom/assinatura)
   peakWindows: z.array(z.object({ from: hhmm, to: hhmm })).default([{ from: '07:00', to: '09:30' }, { from: '17:00', to: '20:00' }]),
   roundToCents: z.number().int().min(1).default(100),

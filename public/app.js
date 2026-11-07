@@ -328,7 +328,7 @@ async function telaOrcamento(id) {
   app.innerHTML = `
     <a href="#/fila" class="voltar">← Fila</a>
     <div class="cab-orc">
-      <span class="label">${o.codigo} · recebido ${dataHora(o.criadoEm)} · ${haQuanto(o.criadoEm)}</span>
+      <span class="label">${o.codigo} · recebido ${dataHora(o.criadoEm)} · ${haQuanto(o.criadoEm)}${o.origem?.conversationId ? ` · <a href="#/conversas/${esc(o.origem.conversationId)}">ver conversa completa</a>` : ""}</span>
       <h1>${esc(o.cliente.nome || o.cliente.telefone)}</h1>
       <div class="linha"><span class="chip ${o.status}">${meta.status[o.status]}</span>${ev.tipo ? `<span class="chip">${esc(ev.tipo)}</span>` : ""}</div>
     </div>

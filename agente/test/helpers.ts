@@ -7,7 +7,7 @@ import { openDb } from '../src/db.js';
 import { seedDemo } from '../src/scripts/seedDemo.js';
 import { PdfRenderer } from '../src/services/pdf.js';
 import { SimulatedCalendarAdapter } from '../src/services/calendar.js';
-import { RouteProvider } from '../src/services/transport.js';
+import { RouteProvider, SimulatedRouteProvider } from '../src/services/transport.js';
 import { handleInbound } from '../src/agent/agent.js';
 import { setLoggerSilent } from '../src/lib/logger.js';
 import { localToEpoch } from '../src/lib/time.js';
@@ -27,11 +27,11 @@ export class FakePdf implements PdfRenderer {
 
 export function makeCtx(opts: { seed?: boolean; env?: Record<string, string>; routeProvider?: RouteProvider; fetchFn?: typeof fetch } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'adri-'));
-  const config = loadConfig({ ADMIN_API_TOKEN: 'test-token', DATA_DIR: dir, DB_PATH: ':memory:', ...(opts.env ?? {}) } as NodeJS.ProcessEnv);
+  const config = loadConfig({ ADMIN_API_TOKEN: 'test-token', SIMULAR: '1', DATA_DIR: dir, DB_PATH: ':memory:', ...(opts.env ?? {}) } as NodeJS.ProcessEnv);
   const db = openDb(':memory:');
   if (opts.seed !== false) seedDemo(db);
   const pdf = new FakePdf();
-  const ctx: Ctx = buildContext(config, { db, now: () => NOW, pdf, routeProvider: opts.routeProvider, fetchFn: opts.fetchFn, sleep: async () => {} });
+  const ctx: Ctx = buildContext(config, { db, now: () => NOW, pdf, routeProvider: opts.routeProvider ?? new SimulatedRouteProvider(), calendarAdapter: new SimulatedCalendarAdapter(db), fetchFn: opts.fetchFn, sleep: async () => {} });
   return { ctx, pdf, calendar: ctx.calendar.adapter as SimulatedCalendarAdapter };
 }
 
