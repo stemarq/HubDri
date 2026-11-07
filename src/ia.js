@@ -52,7 +52,6 @@ function blocosImagem(orc) {
     try {
       const data = fs.readFileSync(path.join(UPLOADS_DIR, img.arquivo)).toString("base64");
       blocos.push({ type: "image", source: { type: "base64", media_type: img.mimeType, data } });
-      if (img.legenda) blocos.push({ type: "text", text: `Legenda da foto acima: ${img.legenda}` });
     } catch {
       /* imagem ausente no disco: ignora */
     }

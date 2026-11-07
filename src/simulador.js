@@ -81,9 +81,9 @@ export function leadExemplo() {
       { de: "ia", texto: "Obrigada! Vou preparar seu orçamento e já te retorno por aqui." },
     ],
     imagens: [
-      { base64: pngExemplo([238, 214, 205], [226, 190, 178]), mimeType: "image/png", legenda: "Referência de make" },
-      { base64: pngExemplo([221, 187, 168], [247, 243, 239]), mimeType: "image/png", legenda: "Referência de penteado" },
-      { base64: pngExemplo([196, 140, 122], [170, 112, 96]), mimeType: "image/png", legenda: "Foto da cliente (sem make)" },
+      { base64: pngExemplo([238, 214, 205], [226, 190, 178]), mimeType: "image/png" },
+      { base64: pngExemplo([221, 187, 168], [247, 243, 239]), mimeType: "image/png" },
+      { base64: pngExemplo([196, 140, 122], [170, 112, 96]), mimeType: "image/png" },
     ],
   };
 }

@@ -25,7 +25,7 @@
     { "de": "cliente", "texto": "Vou casar em dezembro! Make e penteado pra mim e 3 madrinhas.", "em": "2026-11-07T10:01:12-03:00" }
   ],
   "imagens": [
-    { "url": "https://exemplo.com/midia/referencia1.jpg", "legenda": "Referência de make" },
-    { "base64": "<conteúdo base64>", "mimeType": "image/jpeg", "legenda": "Foto da cliente" }
+    { "url": "https://exemplo.com/midia/referencia1.jpg" },
+    { "base64": "<conteúdo base64>", "mimeType": "image/jpeg" }
   ]
 }

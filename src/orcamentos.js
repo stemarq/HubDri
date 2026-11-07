@@ -64,7 +64,6 @@ async function salvarImagem(orc, img) {
     id: novoId(),
     arquivo: `${orc.id}/${nome}`,
     mimeType,
-    legenda: img.legenda || img.caption || "",
     recebidaEm: img.recebidaEm || agora(),
   };
 }

@@ -281,8 +281,7 @@ async function telaOrcamento(id) {
           <h2>Imagens do chat <span class="label">${o.imagens.length}</span></h2>
           ${o.imagens.length ? `<div class="imagens">${o.imagens.map((img) => `
             <a href="/uploads/${img.arquivo}" target="_blank" rel="noopener">
-              <img src="/uploads/${img.arquivo}" alt="${esc(img.legenda)}" loading="lazy">
-              <span>${esc(img.legenda || "Sem legenda")}</span>
+              <img src="/uploads/${img.arquivo}" alt="Imagem enviada pela cliente" loading="lazy">
             </a>`).join("")}</div>` : `<p class="muted" style="margin:0">Nenhuma imagem enviada.</p>`}
         </section>
 

@@ -182,7 +182,6 @@ h2 .label { font-size: 11px; }
 .imagens { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .imagens a { display: block; text-decoration: none; }
 .imagens img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; border-radius: var(--r-sm); background: var(--bg); }
-.imagens span { display: block; margin-top: 6px; font-size: 13px; color: var(--muted); }
 
 .historico { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; font-size: 14px; }
 .historico .label { display: block; }
