@@ -2,6 +2,8 @@
 // A Adriana vê o nome da pessoa e TODO o histórico, assume a conversa (a ADRI para de responder), escreve, devolve,
 // corrige o nome, anota observações e exporta a conversa.
 import * as store from "./store.js";
+import { env } from "./config.js";
+import { DEMO_ID, ehDemo, demoLista, demoDetalhe } from "./conversas-demo.js";
 
 const url = () => (process.env.AGENTE_URL || "http://localhost:3001").replace(/\/$/, "");
 const token = () => process.env.AGENTE_TOKEN || "";
@@ -51,6 +53,21 @@ const pessoa = (c) => ({
 });
 
 export function rotasConversas(app, rota) {
+  // MODO_DEMO=1: sem agente conectado, mostra uma conversa de exemplo (só leitura) para apresentação.
+  if (env.demo) {
+    app.use("/api/conversas", (req, res, next) => {
+      const id = req.path.split("/")[1];
+      if (id && ehDemo(id)) {
+        if (req.method === "GET" && req.path === `/${DEMO_ID}`) return res.json(demoDetalhe());
+        return res.status(409).json({ erro: "Esta é uma conversa de exemplo, só para ler. As conversas reais aparecem quando o agente ADRI está conectado." });
+      }
+      if (req.method === "GET" && (req.path === "/" || req.path === "")) {
+        return agente("/api/conversations").then(() => next(), () => res.json(demoLista()));
+      }
+      next();
+    });
+  }
+
   app.get("/api/conversas", rota(async (req, res) => {
     const q = req.query.q ? `?q=${encodeURIComponent(String(req.query.q))}` : "";
     const { conversations } = await agente("/api/conversations" + q);

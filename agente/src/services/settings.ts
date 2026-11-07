@@ -6,7 +6,7 @@ const hhmm = z.string().regex(/^\d{2}:\d{2}$/);
 
 export const SchedulingSettings = z.object({
   prepMinutes: z.number().int().min(0).default(20),          // montagem do kit ao chegar
-  finishMarginMinutes: z.number().int().min(0).default(15),  // folga entre terminar e a cliente precisar estar pronta
+  finishMarginMinutes: z.number().int().min(0).default(30),  // folga de segurança entre terminar e a cliente precisar estar pronta
   cleanupMinutes: z.number().int().min(0).default(15),       // organização antes de sair
   bufferBetweenMinutes: z.number().int().min(0).default(30), // margem entre compromissos
   travelSafetyMinutes: z.number().int().min(0).default(10),  // folga somada ao tempo de trajeto

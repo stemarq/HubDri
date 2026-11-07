@@ -6,7 +6,10 @@ export async function enviarParaWhatsapp(evento, payload) {
   const corpo = { evento, enviadoEm: agora(), ...payload };
 
   // Sem URL configurada: grava na caixa de saída simulada (visível no hub).
-  if (!env.callbackUrl) {
+  // Lead de teste (id "wa-…", do botão Simular lead): não existe conversa real para receber o PDF,
+  // então a entrega é simulada em vez de dar 404 no agente.
+  const leadDeTeste = /^wa-/.test(String(payload.conversationId || ""));
+  if (!env.callbackUrl || leadDeTeste) {
     saidaWhatsapp().unshift({ ...corpo, simulado: true });
     salvar();
     return { ok: true, simulado: true };

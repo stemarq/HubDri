@@ -9,6 +9,39 @@ WhatsApp (IA) ──lead──▶ Hub ──▶ cálculo (IA/regras) ──▶ a
 cliente aprova (link enviado no chat ou respondendo "aceito") ou pede ajustes (só no chat) ──▶ Hub notifica
 ```
 
+## Como usar (resumo)
+
+**1. A cliente conversa com o bot.** No Telegram, ela procura **@Adrihubot**, toca em *Iniciar* e escreve o que precisa (ex.: "quero maquiagem e penteado para um casamento no sábado"). A ADRI pergunta serviço, data, horário e endereço, confirma com ela e envia o pedido ao hub. Se a cliente pedir "falar com a Adriana", a ADRI para de responder.
+
+**2. A Adriana trabalha no hub** (abas no topo):
+
+| Aba | Para que serve |
+|---|---|
+| **Fila** | Orçamentos que precisam de ação, os mais antigos primeiro. Abra um, confira o cálculo (editável) e toque em **Aprovar e enviar**: o PDF e o link de aprovação chegam à cliente no próprio chat. |
+| **Conversas** | Todas as conversas com a ADRI e o histórico completo. Dá para **assumir** a conversa (a ADRI fica em silêncio), escrever como Adriana, **devolver** à ADRI, corrigir o nome, anotar observações e **baixar** a conversa. |
+| **Preço Uber** | Simulador de preço de corrida: informe km, tempo, horário e chuva e veja quanto cobrar (arredondado para cima de 10 em 10). Em **Calibrar**, registre preços reais da Uber para o modelo aprender. Em **Ajustes**, edite os valores. |
+| **Configurações** (ícone de engrenagem) | Estado das integrações (Telegram, WhatsApp, Google Agenda, rotas), preços, regras do orçamento, deslocamento e respostas automáticas da ADRI. |
+| **Sino** | Avisos: novo pedido, resposta da cliente, falha de envio. |
+
+**3. A cliente decide.** Toca no link de aprovação ou responde "aceito" no chat. A ADRI reserva o horário e confirma. Ajustes são combinados na própria conversa.
+
+Sem nenhuma chave configurada a aba **Conversas** abre vazia. É normal: veja a seção abaixo.
+
+**Para apresentar sem agente conectado (ex.: app na Vercel):** defina `MODO_DEMO=1` no hub. A aba **Conversas** mostra uma conversa de exemplo (Mariana Souza, só leitura) quando o agente não responde, e a **Fila** ganha o botão **+ Simular lead** para criar um orçamento de teste. Esse orçamento pode ser calculado, editado e aprovado: o envio é simulado e não vai para ninguém. Com o agente conectado, as conversas reais substituem o exemplo.
+
+## WhatsApp oficial no futuro (Meta, WhatsApp Business API)
+
+Hoje o canal é o Telegram, que é grátis e serve para testar. O WhatsApp entra depois **sem mudar nada no hub**: o agente ganha um segundo canal e as conversas aparecem na mesma aba **Conversas**. O código já está pronto; falta só a conta e as chaves. Passo a passo detalhado em [`GUIA_CONVERSAS.md`](GUIA_CONVERSAS.md) (Parte 2) e as regras técnicas em [`agente/GUIA_INTEGRACAO_WHATSAPP.md`](agente/GUIA_INTEGRACAO_WHATSAPP.md).
+
+1. **Conta na Meta:** crie o Meta Business (business.facebook.com) e um app tipo *Business* com o produto **WhatsApp** em developers.facebook.com. Para sair do limite inicial, verifique a empresa.
+2. **Número dedicado** ao negócio (não pode estar no WhatsApp comum) e nome de exibição aprovado.
+3. **Quatro chaves** no `agente/.env`: `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN` (token permanente de um usuário do sistema), `WHATSAPP_APP_SECRET` e `WHATSAPP_VERIFY_TOKEN` (um texto que você inventa).
+4. **Endereço público com HTTPS** para o agente (domínio, ou ngrok/cloudflared nos testes). O *webhook* da Meta aponta para `https://SEU-ENDERECO/webhooks/whatsapp`, com o campo `messages` assinado.
+5. **Modelo de mensagem aprovado** (categoria *Utilidade*, `pt_BR`, cabeçalho com documento) para enviar o orçamento depois de 24 h sem mensagem da cliente.
+6. **Teste** com o número de teste da Meta. Quando as chaves estiverem certas, `http://localhost:3001/health` mostra `official-cloud-api` e a aba Configurações marca o WhatsApp como conectado.
+
+Regras que mudam em relação ao Telegram: a ADRI só responde a quem escreveu primeiro, dentro de 24 h a conversa é livre e fora disso só vale o modelo aprovado, e a Meta cobra pelas mensagens de modelo (confira a tabela atual no painel dela). Até lá, o Telegram segue funcionando.
+
 ## Rodando
 
 ```bash
@@ -17,7 +50,7 @@ cp .env.example .env   # ajuste as variáveis
 npm run dev            # http://localhost:3000
 ```
 
-Sem configurar nada, o hub funciona em modo local: cálculo por regras, retorno ao WhatsApp simulado (aba **Saída WhatsApp**) e botão **+ Simular lead** para testar o fluxo.
+Sem configurar nada, o hub funciona em modo local: cálculo por regras e botão **+ Simular lead** para testar a Fila (esses leads de teste não podem ser aprovados e enviados: a ADRI só entrega orçamentos que nasceram numa conversa real).
 
 ## Agente ADRI (pasta `agente/`)
 

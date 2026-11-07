@@ -176,7 +176,7 @@ app.get("/api/meta", (req, res) => {
     iaDisponivel: iaDisponivel(),
     ia: iaNome(),
     whatsappSimulado: !env.callbackUrl,
-    simuladorAtivo: !env.producao,
+    simuladorAtivo: !env.producao || env.demo,
     usuario: req.usuario ?? null,
   });
 });
@@ -241,7 +241,7 @@ app.post("/api/notificacoes/lidas", (req, res) => {
 
 app.get("/api/saida-whatsapp", (req, res) => res.json(store.saidaWhatsapp().slice(0, 50)));
 
-if (!env.producao) {
+if (!env.producao || env.demo) {
   app.post("/api/dev/simular", rota(async (req, res) => {
     const { orc } = await fluxo.receberLead(leadExemplo());
     res.status(201).json({ orcamentoId: orc.id, codigo: orc.codigo });

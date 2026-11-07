@@ -99,6 +99,6 @@ Defina `WHATSAPP_*` no `.env`, aponte o webhook da Meta para `/webhooks/whatsapp
 
 - Sem transcrição de áudio e sem análise de imagem (as fotos são guardadas como inspiração).
 - Provedor de rotas simulado cobre ~30 bairros de SP; fora disso exige Google Routes.
-- Durações padrão dos serviços (60/60/120/180 min) são ponto de partida editável.
+- Durações padrão dos serviços (maquiagem 90, penteado 90, maquiagem e penteado 180, pacote de noiva 180 min) e folga de segurança de 30 min antes da cliente precisar estar pronta são ponto de partida editável.
 - Controle de acesso é um token único de administrador; sem perfis. Endereços ficam no SQLite local: proteja o disco e defina retenção antes de produção.
 - Modelo de regressão para transporte é só o ponto de extensão (ajuste por mediana do histórico).
