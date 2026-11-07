@@ -159,7 +159,8 @@ export function extract(text: string, now: Date, awaiting?: string): Extracted {
   // Endereço
   const street = text.match(/\b(rua|r\.|avenida|av\.?|alameda|al\.|travessa|estrada|rodovia|pra[cç]a)\s+[^,;\n]+/i);
   const cep = /\b\d{5}-?\d{3}\b/.test(text);
-  if (street && (/\d{1,5}/.test(street[0]) || cep)) e.address = { raw: text.trim().slice(0, 200), full: true };
+  const streetTail = street ? text.slice(street.index).split(/[.!?](?:\s|$)/)[0].slice(0, 200) : '';
+  if (street && (/\d{1,5}/.test(streetTail) || cep)) e.address = { raw: streetTail.trim(), full: true };
   else if (awaiting === 'address' && /\d/.test(text) && text.trim().length > 8) e.address = { raw: text.trim().slice(0, 200), full: true };
   for (const n of NEIGHBORHOODS) if (t.includes(norm(n))) { e.neighborhood = n; break; }
   if (!e.neighborhood && !e.address) {

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulador WhatsApp · ADRI</title>
+<style>
+:root{--bg:#f6f0f2;--card:#fff;--ink:#3a2f33;--p:#b5527a;--mine:#dcf8c6;--line:#e8dde1}
+@media (prefers-color-scheme:dark){:root{--bg:#1e1a1c;--card:#2a2427;--ink:#efe6ea;--mine:#35503a;--line:#3d3438}}
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:12px 16px;background:var(--p);color:#fff;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header b{flex:1}input,button,textarea{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+button{cursor:pointer;background:var(--p);color:#fff;border:0}button.sec{background:transparent;color:var(--p);border:1px solid var(--p)}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;padding:16px;max-width:1100px;margin:auto}
+@media(max-width:800px){main{grid-template-columns:1fr}}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;min-height:420px}
+h2{margin:0 0 8px;font-size:15px;color:var(--p)}
+#log{flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px;max-height:60vh}
+.m{padding:8px 10px;border-radius:10px;max-width:85%;white-space:pre-wrap;border:1px solid var(--line)}
+.m.me{align-self:flex-end;background:var(--mine)}.m.bot{align-self:flex-start}.m small{display:block;opacity:.6;font-size:11px}
+form{display:flex;gap:8px;margin-top:8px}form input{flex:1}
+.q{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}.q .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--line)}.warn{color:#b3261e}
+</style></head><body>
+<header><b>Simulador de WhatsApp · ADRI (canal SIMULADO, nada é enviado à Meta)</b>
+<input id="token" type="password" placeholder="ADMIN_API_TOKEN" size="18">
+<input id="phone" value="5511999990000" size="14" title="número da cliente simulada">
+<button class="sec" id="reset" style="color:#fff;border-color:#fff">Nova cliente</button></header>
+<main>
+<section><h2>Conversa da cliente</h2><div id="log"></div>
+<form id="f"><input id="t" placeholder="Escreva como a cliente..." autocomplete="off"><button>Enviar</button></form></section>
+<section><h2>Hub · orçamentos <button class="sec" id="reload" style="float:right;padding:2px 8px">Atualizar</button></h2><div id="quotes">Informe o token e envie uma mensagem.</div><div id="stats" style="margin-top:8px;font-size:13px"></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const brl=c=>(c/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const api=async(m,p,b)=>{const r=await fetch(p,{method:m,headers:{'Content-Type':'application/json',Authorization:'Bearer '+$('token').value},body:b?JSON.stringify(b):undefined});return{status:r.status,json:await r.json().catch(()=>({}))}};
+const add=(cls,txt,who)=>{const d=document.createElement('div');d.className='m '+cls;d.textContent=txt;if(who){const s=document.createElement('small');s.textContent=who;d.prepend(s)}$('log').append(d);$('log').scrollTop=1e9};
+$('f').onsubmit=async e=>{e.preventDefault();const text=$('t').value.trim();if(!text)return;$('t').value='';add('me',text);
+ const r=await api('POST','/api/chat/message',{from:$('phone').value,name:'Cliente Simulada',text});
+ if(r.status!==200){add('bot','Erro: '+(r.json.error||r.status)+(r.json.message?' - '+r.json.message:''),'sistema');return}
+ if(r.json.mode==='HUMAN'&&!r.json.replies.length)add('bot','(ADRI silenciada: atendimento humano ativo)','sistema');
+ r.json.replies.forEach(x=>add('bot',x,'ADRI'));load()};
+$('reset').onclick=()=>{$('phone').value='55119'+Math.floor(10000000+Math.random()*89999999);$('log').innerHTML=''};
+async function pdf(id){const r=await fetch('/api/quotes/'+id+'/pdf',{headers:{Authorization:'Bearer '+$('token').value}});if(!r.ok)return alert('PDF indisponível');window.open(URL.createObjectURL(await r.blob()))}
+async function act(id,a,body){const r=await api('POST','/api/quotes/'+id+'/'+a,body||{});if(r.status>=400)alert((r.json.error||'erro')+(r.json.message?': '+r.json.message:''));load()}
+async function load(){if(!$('token').value)return;const r=await api('GET','/api/quotes');if(r.status!==200){$('quotes').textContent='Token inválido ou API indisponível ('+r.status+')';return}
+ $('quotes').innerHTML='';r.json.quotes.forEach(q=>{const d=document.createElement('div');d.className='q';
+  d.innerHTML=`<b>#${q.number} · ${q.service.name}</b> <span class="tag">${q.status}</span><div>${q.customer?.name||''} · ${q.event.date||''} · ${brl(q.totalCents)}</div>`+
+   (q.reviewReasons.length?`<div class="warn">Revisão: ${q.reviewReasons.join(', ')}</div>`:'')+
+   `<div style="font-size:12px;opacity:.7">${q.transport.map(t=>t.leg+' '+brl(t.predictedCents)+' ('+t.confidence+(t.simulated?', rota simulada':'')+')').join(' · ')}</div>`;
+  const row=document.createElement('div');row.className='row';
+  const b=(t,f,sec)=>{const x=document.createElement('button');x.textContent=t;if(sec)x.className='sec';x.onclick=f;row.append(x)};
+  if(q.pdfAvailable)b('Ver PDF',()=>pdf(q.id),1);
+  if(['PENDING_APPROVAL','NEEDS_REVIEW','INFO_REQUESTED'].includes(q.status)){b('Aprovar',()=>act(q.id,'approve'));b('Rejeitar',()=>act(q.id,'reject',{reason:prompt('Motivo?')||''}),1);b('Pedir info',()=>{const s=prompt('Pergunta à cliente?');if(s)act(q.id,'request-info',{question:s})},1)}
+  if(q.status==='APPROVED')b('Enviar ao WhatsApp',()=>act(q.id,'send'));
+  if(q.status==='SENT'){b('Confirmar aceite',()=>act(q.id,'accept'));b('Marcou perdida',()=>act(q.id,'lost',{reason:prompt('Motivo?')||undefined}),1)}
+  d.append(row);$('quotes').append(d)});
+ const o=(await api('GET','/api/analytics/overview')).json;$('stats').textContent=`Clientes ${o.customersAttended} · gerados ${o.quotesGenerated} · enviados ${o.quotesSent} · aceitos ${o.quotesAccepted} · receita contratada ${brl(o.contractedRevenueCents||0)}`}
+$('reload').onclick=load;$('token').onchange=load;
+</script></body></html>
