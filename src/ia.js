@@ -78,7 +78,8 @@ async function lerImagens(orc, tiposAceitos) {
 
 function montarPedido(orc, cfg, pedidoDeMudanca) {
   const catalogo = cfg.catalogo
-    .map((c) => `- ${c.codigo}: ${c.descricao} (${c.unidade}) R$ ${c.valor}`)
+    // Sem preços: a IA só escolhe itens; o valor (studio ou domicílio) é aplicado pelo servidor.
+    .map((c) => `- ${c.codigo}: ${c.descricao} (${c.unidade})`)
     .join("\n");
 
   const sistema = [

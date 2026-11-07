@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import * as store from "./store.js";
 import { agora, novoId, salvar, notificar } from "./store.js";
 import { config, env } from "./config.js";
-import { montarCalculo, propostaPorRegras, recalcularTotais } from "./calculo.js";
+import { montarCalculo, propostaPorRegras, recalcularTotais, localDoAtendimento, precoNoLocal, LOCAIS, PREFIXO_SEM_DOMICILIO, avisoSemDomicilio } from "./calculo.js";
 import { iaDisponivel, iaNome, proporOrcamento } from "./ia.js";
 import { enviarParaWhatsapp } from "./whatsapp.js";
 
@@ -160,7 +160,11 @@ export async function calcular(id, pedidoDeMudanca = null) {
   if (geradoPor === "regras" && pedidoDeMudanca)
     proposta.pontosDeAtencao.push(`Mudança pedida: "${pedidoDeMudanca}". O cálculo por regras não interpreta texto livre: ajuste os itens manualmente.`);
 
-  orc.calculo = montarCalculo(proposta, cfg, geradoPor);
+  // Local trocado à mão pela Adriana vale também nos novos cálculos.
+  const anterior = orc.calculo;
+  const onde = anterior?.localManual ? { local: anterior.local, informado: true } : localDoAtendimento(orc);
+  orc.calculo = montarCalculo(proposta, cfg, geradoPor, onde);
+  if (anterior?.localManual) orc.calculo.localManual = true;
   if (geradoPor === "ia") orc.calculo.ia = nomeIa;
   if (!orc.briefing.resumo && proposta.resumo) orc.briefing.resumo = proposta.resumo;
   limparAprovacao(orc);
@@ -225,7 +229,7 @@ export function editarCalculo(id, { itens, descontoPercentual }, autor = null) {
         descricao: cat.descricao,
         unidade: cat.unidade,
         quantidade: Number(i.quantidade),
-        valorUnitario: Number(i.valorUnitario ?? cat.valor),
+        valorUnitario: Number(i.valorUnitario ?? precoNoLocal(cat, calc.local)),
         observacao: i.observacao || "",
       };
     });
@@ -236,6 +240,32 @@ export function editarCalculo(id, { itens, descontoPercentual }, autor = null) {
   limparAprovacao(orc);
   orc.status = "aguardando_aprovacao";
   historico(orc, "Orçamento editado manualmente", `total R$ ${calc.total.toFixed(2)}`, autor);
+  salvar();
+  return orc;
+}
+
+/** Troca studio ↔ domicílio: reprecifica os itens pela tabela do novo local. */
+export function trocarLocal(id, local, autor = null) {
+  const orc = store.acharOrcamento(id);
+  exigir(orc, "aguardando_aprovacao", "mudanca_cliente", "falha_envio");
+  if (!LOCAIS[local]) throw new ErroFluxo("Local inválido: use studio ou domicilio");
+  const porCodigo = new Map(config().catalogo.map((c) => [c.codigo, c]));
+  const calc = orc.calculo;
+  const semDomicilio = [];
+  calc.itens = calc.itens.map((i) => {
+    const cat = porCodigo.get(i.codigo);
+    if (!cat) return i; // item que saiu do catálogo: mantém o valor que já tinha
+    if (local === "domicilio" && cat.valorDomicilio == null) semDomicilio.push(cat.descricao);
+    return { ...i, valorUnitario: precoNoLocal(cat, local) };
+  });
+  calc.local = local;
+  calc.localManual = true;
+  calc.pontosDeAtencao = (calc.pontosDeAtencao || []).filter((p) => !p.startsWith(PREFIXO_SEM_DOMICILIO) && !p.startsWith("Local do atendimento não informado"));
+  if (semDomicilio.length) calc.pontosDeAtencao.push(avisoSemDomicilio(semDomicilio));
+  recalcularTotais(calc);
+  limparAprovacao(orc);
+  orc.status = "aguardando_aprovacao";
+  historico(orc, `Local do atendimento: ${LOCAIS[local].toLowerCase()}`, `total R$ ${calc.total.toFixed(2)}`, autor);
   salvar();
   return orc;
 }

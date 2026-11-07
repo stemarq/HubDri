@@ -4,30 +4,63 @@ import { agora } from "./store.js";
 
 const arred = (n) => Math.round(n * 100) / 100;
 
-export function montarCalculo(proposta, cfg, geradoPor) {
+export const LOCAIS = { studio: "No studio", domicilio: "A domicílio" };
+
+// Tudo o que a cliente contou, num texto só (minúsculo), para as regras.
+function textoDoPedido(orc) {
+  return [
+    orc.briefing?.resumo,
+    orc.evento && Object.values(orc.evento).join(" "),
+    ...(orc.briefing?.respostas || []).map((r) => `${r.pergunta} ${r.resposta}`),
+    ...(orc.conversa || []).filter((m) => m.de === "cliente").map((m) => m.texto),
+    ...(orc.revisoes || []).map((r) => r.comentario),
+  ].join(" \n ").toLowerCase();
+}
+
+/** Onde será o atendimento: no studio da Adriana ou a domicílio (endereço informado pela cliente). */
+export function localDoAtendimento(orc) {
+  const texto = textoDoPedido(orc);
+  if (/\bst[uú]dio\b|\best[uú]dio\b|mois[eé]s de corena|(?:ir|vou) at[eé] (?:voc[eê]|a[ií])/.test(texto))
+    return { local: "studio", informado: true };
+  if (String(orc.evento?.local || "").trim() || /domic[ií]lio|em casa|minha casa|no hotel|venha at[eé]|vir at[eé]/.test(texto))
+    return { local: "domicilio", informado: true };
+  return { local: "studio", informado: false };
+}
+
+/** Preço do serviço no local. Sem preço a domicílio cadastrado, usa o do studio. */
+export const precoNoLocal = (cat, local) => (local === "domicilio" && cat.valorDomicilio != null ? cat.valorDomicilio : cat.valor);
+
+export function montarCalculo(proposta, cfg, geradoPor, { local = "studio", informado = true } = {}) {
   const porCodigo = new Map(cfg.catalogo.map((c) => [c.codigo, c]));
   const itens = [];
+  const semPrecoDomicilio = [];
   for (const p of proposta.itens || []) {
     const cat = porCodigo.get(p.codigo);
     const qtd = Number(p.quantidade);
     if (!cat || !(qtd > 0)) continue;
+    if (local === "domicilio" && cat.valorDomicilio == null) semPrecoDomicilio.push(cat.descricao);
+    const valor = precoNoLocal(cat, local);
     itens.push({
       codigo: cat.codigo,
       descricao: cat.descricao,
       unidade: cat.unidade,
       quantidade: arred(qtd),
-      valorUnitario: cat.valor,
-      total: arred(cat.valor * qtd),
+      valorUnitario: valor,
+      total: arred(valor * qtd),
       observacao: p.observacao || "",
     });
   }
+  const pontos = [...(proposta.pontosDeAtencao || [])];
+  if (!informado) pontos.push("Local do atendimento não informado: considerado no studio. Troque para domicílio se for o caso.");
+  if (semPrecoDomicilio.length) pontos.push(avisoSemDomicilio(semPrecoDomicilio));
   return recalcularTotais(
     {
+      local,
       itens,
       descontoPercentual: Math.min(Math.max(Number(proposta.descontoPercentual) || 0, 0), cfg.descontoMaximoPercentual),
       resumo: proposta.resumo || "",
       justificativa: proposta.justificativa || "",
-      pontosDeAtencao: proposta.pontosDeAtencao || [],
+      pontosDeAtencao: pontos,
       validadeDias: cfg.validadeDias,
       geradoPor,
       geradoEm: agora(),
@@ -45,13 +78,7 @@ export function recalcularTotais(calc) {
 
 // Fallback sem IA: extrai do texto quem será maquiada, serviços extras, horário e distância.
 export function propostaPorRegras(orc) {
-  const texto = [
-    orc.briefing?.resumo,
-    orc.evento && Object.values(orc.evento).join(" "),
-    ...(orc.briefing?.respostas || []).map((r) => `${r.pergunta} ${r.resposta}`),
-    ...(orc.conversa || []).filter((m) => m.de === "cliente").map((m) => m.texto),
-    ...(orc.revisoes || []).map((r) => r.comentario),
-  ].join(" \n ").toLowerCase();
+  const texto = textoDoPedido(orc);
 
   const num = (re) => {
     const m = texto.match(re);
@@ -105,3 +132,7 @@ export function propostaPorRegras(orc) {
     pontosDeAtencao: pontos,
   };
 }
+
+export const PREFIXO_SEM_DOMICILIO = "Sem preço a domicílio cadastrado";
+export const avisoSemDomicilio = (descricoes) =>
+  `${PREFIXO_SEM_DOMICILIO} (usado o do studio): ${descricoes.join(", ")}. Cadastre em Configurações ou ajuste o valor.`;

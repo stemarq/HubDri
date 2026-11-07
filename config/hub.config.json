@@ -16,6 +16,7 @@
       "descricao": "Make Express à Prova d'Água",
       "unidade": "pessoa",
       "valor": 159.99,
+      "valorDomicilio": 189.99,
       "detalhe": "Maquiagem express, ideal para o dia a dia e compromissos rápidos.",
       "inclui": [
         "Análise visagista personalizada",
@@ -30,6 +31,7 @@
       "descricao": "Make Visagista Personalizada à Prova d'Água",
       "unidade": "pessoa",
       "valor": 199.99,
+      "valorDomicilio": 229.99,
       "detalhe": "Maquiagem completa, com acabamento mais elaborado para ocasiões especiais.",
       "inclui": [
         "Análise visagista personalizada",
@@ -54,6 +56,7 @@
       "descricao": "Penteado Personalizado",
       "unidade": "pessoa",
       "valor": 169.99,
+      "valorDomicilio": 259.99,
       "detalhe": "Penteado personalizado conforme o estilo, look e ocasião da cliente.",
       "inclui": [
         "Escolha do estilo do penteado junto com a cliente",
