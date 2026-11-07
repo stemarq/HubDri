@@ -723,7 +723,7 @@ async function render({ carregando = false } = {}) {
         <span class="label">${semRede ? "Sem conexão" : "Erro"}</span>
         <p>${esc(e.message)}</p>
         <div class="acoes-erro">
-          <button class="btn cheio" data-tentar>Tentar de novo</button>
+          <button class="btn cheio" data-tentar ${semRede ? "data-sem-rede" : ""}>Tentar de novo</button>
           ${tela === "orcamento" ? `<a class="btn" href="#/fila">Voltar à fila</a>` : ""}
         </div>
       </div>`;
@@ -742,7 +742,7 @@ async function ciclo() {
     return;
   }
   // A conexão voltou e a tela ficou no erro: tenta de novo sozinha.
-  if (app.querySelector("[data-tentar]")) return render();
+  if (app.querySelector("[data-tentar][data-sem-rede]")) return render();
   const [, tela] = (location.hash || "#/fila").split("/");
   const digitando = document.activeElement?.matches("input, textarea, select, .dropdown *");
   const ocupado = $("#dialogo").open || app.querySelector("button[aria-busy]");
