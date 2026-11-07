@@ -29,14 +29,17 @@ export class ErroFluxo extends Error {
   }
 }
 
-function historico(orc, evento, detalhe = "") {
-  orc.historico.push({ em: agora(), evento, detalhe });
+// autor: { id, nome } de quem está logada; vazio para ações automáticas (webhook, IA, servidor).
+function historico(orc, evento, detalhe = "", autor = null) {
+  orc.historico.push({ em: agora(), evento, detalhe, ...(autor && { autorId: autor.id, autorNome: autor.nome }) });
   orc.atualizadoEm = agora();
 }
 
 // Aprovação única: a empresária aprova e o PDF segue para o WhatsApp.
 function limparAprovacao(orc) {
   orc.aprovadoEm = null;
+  orc.aprovadoPor = null;
+  orc.aprovadoPorNome = null;
 }
 
 // ---------- Entrada (webhook da IA do WhatsApp) ----------
@@ -172,27 +175,29 @@ function exigir(orc, ...status) {
   if (!status.includes(orc.status)) throw new ErroFluxo(`Ação indisponível no status "${STATUS[orc.status]}"`, 409);
 }
 
-export async function aprovar(id) {
+export async function aprovar(id, autor = null) {
   const orc = store.acharOrcamento(id);
   exigir(orc, "aguardando_aprovacao");
   orc.aprovadoEm = agora();
-  historico(orc, "Orçamento aprovado");
+  orc.aprovadoPor = autor?.id ?? null;
+  orc.aprovadoPorNome = autor?.nome ?? null;
+  historico(orc, "Orçamento aprovado", "", autor);
   salvar();
   return enviar(orc.id);
 }
 
-export function solicitarMudanca(id, comentario) {
+export function solicitarMudanca(id, comentario, autor = null) {
   const orc = store.acharOrcamento(id);
   exigir(orc, "aguardando_aprovacao", "mudanca_cliente", "falha_envio");
   if (!comentario?.trim()) throw new ErroFluxo("Descreva a mudança desejada");
-  orc.revisoes.push({ comentario, em: agora(), origem: "hub" });
-  historico(orc, "Mudança solicitada", comentario);
+  orc.revisoes.push({ comentario, em: agora(), origem: "hub", ...(autor && { autorId: autor.id, autorNome: autor.nome }) });
+  historico(orc, "Mudança solicitada", comentario, autor);
   salvar();
   calcularEmSegundoPlano(orc.id, comentario);
   return orc;
 }
 
-export function editarCalculo(id, { itens, descontoPercentual }) {
+export function editarCalculo(id, { itens, descontoPercentual }, autor = null) {
   const orc = store.acharOrcamento(id);
   exigir(orc, "aguardando_aprovacao", "mudanca_cliente", "falha_envio");
   const cfg = config();
@@ -217,7 +222,7 @@ export function editarCalculo(id, { itens, descontoPercentual }) {
   recalcularTotais(calc);
   limparAprovacao(orc);
   orc.status = "aguardando_aprovacao";
-  historico(orc, "Orçamento editado manualmente", `total R$ ${calc.total.toFixed(2)}`);
+  historico(orc, "Orçamento editado manualmente", `total R$ ${calc.total.toFixed(2)}`, autor);
   salvar();
   return orc;
 }

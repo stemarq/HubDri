@@ -62,6 +62,22 @@ export function notificar({ tipo, titulo, texto, orcamentoId }) {
   salvar();
 }
 
+// ---------- Equipe (perfis do login) ----------
+
+// Nomes da equipe, para mostrar quem aprovou/editou. Preenchido na carga e a cada login.
+const nomes = new Map();
+export const nomePerfil = (id) => (id ? nomes.get(id) ?? null : null);
+
+export async function buscarPerfil(id) {
+  if (!supa) return null;
+  const perfil = await consulta(
+    supa.from("perfis").select("id, nome, email, papel, ativo").eq("id", id).maybeSingle(),
+    "buscar perfil"
+  );
+  if (perfil) nomes.set(perfil.id, perfil.nome || perfil.email);
+  return perfil;
+}
+
 // ---------- Arquivos (imagens do chat) ----------
 
 export async function salvarArquivo(caminho, buf, mimeType) {
@@ -118,6 +134,7 @@ const linhaOrcamento = (o) => ({
   briefing: o.briefing,
   calculo: o.calculo,
   aprovado_em: iso(o.aprovadoEm),
+  aprovado_por: o.aprovadoPor ?? null,
   resposta_decisao: o.respostaCliente?.decisao ?? null,
   resposta_comentario: o.respostaCliente?.comentario ?? null,
   resposta_via: o.respostaCliente?.via ?? null,
@@ -143,14 +160,14 @@ const FILHOS = {
   historico: {
     tabela: "orcamento_historico",
     ordem: "id",
-    paraLinha: (x, id) => ({ orcamento_id: id, evento: x.evento, detalhe: x.detalhe ?? "", em: iso(x.em) ?? agora() }),
-    deLinha: (r) => ({ em: iso(r.em), evento: r.evento, detalhe: r.detalhe }),
+    paraLinha: (x, id) => ({ orcamento_id: id, evento: x.evento, detalhe: x.detalhe ?? "", autor_id: x.autorId ?? null, em: iso(x.em) ?? agora() }),
+    deLinha: (r) => ({ em: iso(r.em), evento: r.evento, detalhe: r.detalhe, autorId: r.autor_id, autorNome: nomePerfil(r.autor_id) }),
   },
   revisoes: {
     tabela: "orcamento_revisoes",
     ordem: "id",
-    paraLinha: (x, id) => ({ orcamento_id: id, comentario: x.comentario, origem: x.origem, em: iso(x.em) ?? agora() }),
-    deLinha: (r) => ({ comentario: r.comentario, em: iso(r.em), origem: r.origem }),
+    paraLinha: (x, id) => ({ orcamento_id: id, comentario: x.comentario, origem: x.origem, autor_id: x.autorId ?? null, em: iso(x.em) ?? agora() }),
+    deLinha: (r) => ({ comentario: r.comentario, em: iso(r.em), origem: r.origem, autorId: r.autor_id, autorNome: nomePerfil(r.autor_id) }),
   },
   envios: {
     tabela: "orcamento_envios",
@@ -174,6 +191,8 @@ function deLinhaOrcamento(r) {
     briefing: r.briefing,
     calculo: r.calculo,
     aprovadoEm: iso(r.aprovado_em),
+    aprovadoPor: r.aprovado_por ?? null,
+    aprovadoPorNome: nomePerfil(r.aprovado_por),
     respostaCliente: r.resposta_decisao
       ? { decisao: r.resposta_decisao, comentario: r.resposta_comentario ?? "", em: iso(r.resposta_em), via: r.resposta_via }
       : null,
@@ -198,6 +217,7 @@ async function consulta(promessa, oque) {
 }
 
 async function carregarSupabase() {
+  for (const p of await consulta(supa.from("perfis").select("id, nome, email"), "carregar equipe")) nomes.set(p.id, p.nome || p.email);
   const filhos = Object.values(FILHOS).map((f) => `${f.tabela}(*)`).join(", ");
   const linhas = [];
   for (let de = 0; ; de += 500) {
