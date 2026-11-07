@@ -118,15 +118,16 @@ Mobile-first, tema claro, elementos arredondados e sem animações. Paleta nude/
 ### PDF do orçamento
 
 Segue o material de apresentação da Dri Gianetti:
-- **Página 1:** logo, nome da cliente, a frase da marca, "Nosso diferencial", atendimento no studio e a domicílio, e fotos.
-- **Página 2 em diante:** os itens com o "o que está incluso" de cada serviço, o total, as referências enviadas pela cliente e as condições (50% de entrada, formas de pagamento, deslocamento).
+- **Página 1:** logo, nome da cliente, a frase da marca, "Nosso diferencial", atendimento no studio e a domicílio, e duas fotos de atendimento.
+- **Página 2 (portfólio):** "Um pouco do meu trabalho", até 6 fotos, primeiro as dos serviços do orçamento (noiva e debutante usam as de make/penteado).
+- **Página 3 em diante:** os itens com o "o que está incluso" de cada serviço, o total, as referências enviadas pela cliente e os avisos e condições (endereço e horário do studio ou aviso do deslocamento, 50% de entrada, formas de pagamento).
 - **Rodapé:** e-mail, telefone e Instagram.
 - **Sem botão de aprovação:** a cliente confirma pelo link enviado no chat ou respondendo na conversa.
 
 Onde ficam os textos e as imagens:
 - Textos: `config/hub.config.json`, em `empresa`, `apresentacao` e nos campos `detalhe`/`inclui` de cada item do catálogo.
 - Logo: `config/marca/logo.png`.
-- **Fotos de atendimento:** ficam em `data/marca/` (qualquer `.jpg`/`.png`, as duas primeiras em ordem alfabética), **fora do Git**, porque mostram clientes e o repositório é público. Sem fotos, a página 1 sai só com o texto.
+- **Fotos do trabalho:** ficam no Storage do Supabase (bucket `imagens-orcamento`, pasta `marca/`), **fora do Git**, porque mostram clientes e o repositório é público. Assim todo PDF tem as fotos, inclusive na Vercel. Nome do arquivo: `<grupo>--<n>.jpg`, com grupo `geral` (página 1) ou o código do serviço (`MAKE-EXPRESS`, `MAKE-VISAGISTA`, `MAKE-INFANTIL`, `PENT`, `PENT-CACHEADO`). Para trocar: coloque as fotos em `data/marca/` e rode `npm run marca:enviar` (com `-- --limpar` apaga do Storage as que saíram). Sem Supabase, o PDF lê direto de `data/marca/`.
 
 ## Banco de dados (Supabase)
 
