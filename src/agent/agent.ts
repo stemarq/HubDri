@@ -57,6 +57,10 @@ export function resume(ctx: Ctx, conversationId: string) {
   ctx.events.emit('RESUME', { conversationId });
 }
 
+import type { InboundEvent } from '../channels/types.js';
+export const handleEvent = (ctx: Ctx, e: InboundEvent) =>
+  handleInbound(ctx, { waId: e.userId, name: e.displayName, channel: e.channel, type: e.type, text: e.text, waMessageId: e.messageId, mediaPath: e.mediaPath });
+
 export function handleInbound(ctx: Ctx, inp: InboundInput): Promise<InboundResult> {
   return serialized(inp.waId, () => process(ctx, inp));
 }

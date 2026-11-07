@@ -6,11 +6,12 @@ import { z, ZodError } from 'zod';
 import { Ctx } from './context.js';
 import { whatsappConfigured } from './config.js';
 import { all, one, parse } from './db.js';
-import { handleInbound, handoff, resume, saveInboundMedia } from './agent/agent.js';
+import { handleEvent, handleInbound, handoff, resume, saveInboundMedia } from './agent/agent.js';
 import * as Q from './services/quotes.js';
 import { calculatePrice } from './services/pricing.js';
 import { planVisit } from './services/planner.js';
-import { parseWebhook, verifySignature, WhatsAppError } from './services/whatsapp.js';
+import { verifySignature, WhatsAppCloudAdapter } from './channels/whatsappCloud.js';
+import { WhatsAppError } from './channels/types.js';
 import { SimulatedCalendarAdapter } from './services/calendar.js';
 import { RouteError } from './services/transport.js';
 import * as A from './services/analytics.js';
@@ -41,12 +42,9 @@ export function createApp(ctx: Ctx) {
   app.post('/webhooks/whatsapp', wrap(async (req: any, res) => {
     if (!whatsappConfigured(ctx.config)) return res.status(503).json({ error: 'WHATSAPP_NOT_CONFIGURED' });
     if (!verifySignature(req.rawBody ?? '', req.header('x-hub-signature-256'), ctx.config.whatsapp.appSecret)) return res.sendStatus(401);
-    for (const m of parseWebhook(req.body)) {
-      try {
-        let mediaPath: string | undefined;
-        if (m.mediaId) mediaPath = await ctx.outbound.downloadMedia(m.mediaId, ctx.mediaDir, m.type === 'image' ? 'jpg' : 'ogg');
-        await handleInbound(ctx, { waId: m.from, name: m.name, channel: 'WHATSAPP', type: m.type, text: m.text, waMessageId: m.waMessageId, mediaPath, mediaId: m.mediaId });
-      } catch (e) { logger.error('webhook.message.failed', { id: m.waMessageId, err: (e as Error).message }); }
+    const events = await (ctx.channels.WHATSAPP as WhatsAppCloudAdapter).toEvents(req.body, ctx.mediaDir);
+    for (const ev of events) {
+      try { await handleEvent(ctx, ev); } catch (e) { logger.error('webhook.message.failed', { id: ev.messageId, err: (e as Error).message }); }
     }
     res.sendStatus(200); // 200 sempre após persistir: retentativas da Meta são deduplicadas por wa_message_id
   }));

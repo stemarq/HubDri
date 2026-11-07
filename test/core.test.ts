@@ -4,7 +4,7 @@ import { calculatePrice } from '../src/services/pricing.js';
 import { computeTimes } from '../src/services/planner.js';
 import { isHoliday } from '../src/lib/holidays.js';
 import { epochToLocal, localToEpoch } from '../src/lib/time.js';
-import { verifySignature } from '../src/services/whatsapp.js';
+import { verifySignature } from '../src/channels/whatsappCloud.js';
 import { createHmac } from 'node:crypto';
 import { NOW, SAT, makeCtx, busy } from './helpers.js';
 import { setSetting, writePricingSettings, PricingExtras } from '../src/services/settings.js';

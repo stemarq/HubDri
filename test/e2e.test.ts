@@ -378,8 +378,9 @@ describe('canal Telegram (simulação)', () => {
       return new Response(JSON.stringify({ ok: true }));
     }) as unknown as typeof fetch;
     const { ctx } = makeCtx({ env: { TELEGRAM_BOT_TOKEN: 'T0K', TELEGRAM_ALLOWED_CHAT_IDS: '77' }, fetchFn });
-    const { TelegramPoller } = await import('../src/services/telegram.js');
-    const poller = new TelegramPoller(ctx, fetchFn, 0);
+    const { TelegramPoller, TelegramAdapter } = await import('../src/channels/telegram.js');
+    const { handleEvent } = await import('../src/agent/agent.js');
+    const poller = new TelegramPoller(new TelegramAdapter(ctx.config, fetchFn), ctx.mediaDir, (e) => handleEvent(ctx, e), 0);
     const msg = (id: number, chat: number, text: string) => ({ update_id: id, message: { chat: { id: chat }, from: { first_name: 'Maria' }, text } });
     updates = [msg(1, 77, DEMO), msg(2, 99, 'intruso'), msg(1, 77, DEMO)];
     expect(await poller.pollOnce()).toBe(2); // chat 99 bloqueado; update repetido deduplicado

@@ -8,7 +8,8 @@ import { QuotePdfData, renderQuoteHtml } from './pdf.js';
 import { getSetting } from './settings.js';
 import { addDays, epochToLocal, fmtTime, localToEpoch } from '../lib/time.js';
 import { CalendarError } from './calendar.js';
-import { SendResult, WhatsAppError } from './whatsapp.js';
+import { SendResult } from './outbound.js';
+import { ChannelError } from '../channels/types.js';
 import { logger } from '../lib/logger.js';
 
 export interface Slots {
@@ -245,7 +246,7 @@ export async function sendQuote(ctx: Ctx, id: string, actor: string): Promise<{ 
   try {
     delivery = await ctx.outbound.sendQuoteDocument(q.conversation_id, q.pdf_path, `Aqui está a sua proposta 💗 Qualquer dúvida é só falar por aqui.`, { idemKey: `quote-send:${id}`, author: 'ADRIANA' });
   } catch (e) {
-    if (e instanceof WhatsAppError) throw new QuoteError(e.code, e.code === 'WHATSAPP_NOT_CONFIGURED' ? 503 : 502, e.message);
+    if (e instanceof ChannelError) throw new QuoteError(e.code, e.code.endsWith('_NOT_CONFIGURED') ? 503 : 502, e.message);
     throw e;
   }
   run(ctx.db, "UPDATE quotes SET status='SENT', sent_at=?, updated_at=? WHERE id=?", ctx.now().getTime(), ctx.now().getTime(), id);
