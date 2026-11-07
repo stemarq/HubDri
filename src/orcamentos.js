@@ -171,6 +171,12 @@ export async function calcular(id, pedidoDeMudanca = null) {
   const onde = anterior?.localManual ? { local: anterior.local, informado: true } : localDoAtendimento(orc);
   orc.calculo = montarCalculo(proposta, cfg, geradoPor, onde);
   aplicarDeslocamento(orc.calculo, orc);
+  // Deslocamento digitado pela Adriana continua valendo se a ADRI não tiver estimativa.
+  const deslManual = anterior?.itens?.find((i) => i.codigo === CODIGO_DESLOCAMENTO && i.manual);
+  if (deslManual && orc.calculo.local === "domicilio" && !orc.calculo.itens.some((i) => i.codigo === CODIGO_DESLOCAMENTO)) {
+    orc.calculo.itens.push(deslManual);
+    orc.calculo.pontosDeAtencao = orc.calculo.pontosDeAtencao.filter((p) => !p.startsWith("Deslocamento não calculado"));
+  }
   recalcularTotais(orc.calculo);
   if (anterior?.localManual) orc.calculo.localManual = true;
   if (geradoPor === "ia") orc.calculo.ia = nomeIa;
@@ -228,13 +234,21 @@ export function editarCalculo(id, { itens, descontoPercentual }, autor = null) {
   const cfg = config();
   const porCodigo = new Map(cfg.catalogo.map((c) => [c.codigo, c]));
   const calc = orc.calculo;
-  // O deslocamento não é do catálogo: mantém o item, com o valor que a Adriana deixar.
+  // O deslocamento não é do catálogo: vale o da ADRI ou um digitado pela Adriana.
   const desl = calc.itens.find((i) => i.codigo === CODIGO_DESLOCAMENTO);
   calc.itens = (itens || [])
-    .filter((i) => (porCodigo.has(i.codigo) || (desl && i.codigo === CODIGO_DESLOCAMENTO)) && Number(i.quantidade) > 0)
+    .filter((i) => (porCodigo.has(i.codigo) || i.codigo === CODIGO_DESLOCAMENTO) && Number(i.quantidade) > 0)
     .map((i) => {
-      if (i.codigo === CODIGO_DESLOCAMENTO)
-        return { ...desl, quantidade: Number(i.quantidade), valorUnitario: Number(i.valorUnitario ?? desl.valorUnitario) };
+      if (i.codigo === CODIGO_DESLOCAMENTO) {
+        const valor = Number(i.valorUnitario ?? desl?.valorUnitario ?? 0);
+        const mudou = !desl || valor !== desl.valorUnitario;
+        return {
+          codigo: CODIGO_DESLOCAMENTO, descricao: "Deslocamento (ida e volta)", unidade: "un",
+          quantidade: Number(i.quantidade), valorUnitario: valor,
+          observacao: mudou ? "valor informado pela Adriana" : desl.observacao,
+          ...(mudou || desl?.manual ? { manual: true } : {}),
+        };
+      }
       const cat = porCodigo.get(i.codigo);
       return {
         codigo: cat.codigo,
@@ -247,6 +261,8 @@ export function editarCalculo(id, { itens, descontoPercentual }, autor = null) {
     });
   if (descontoPercentual != null)
     calc.descontoPercentual = Math.min(Math.max(Number(descontoPercentual) || 0, 0), cfg.descontoMaximoPercentual);
+  if (calc.itens.some((i) => i.codigo === CODIGO_DESLOCAMENTO))
+    calc.pontosDeAtencao = (calc.pontosDeAtencao || []).filter((p) => !p.startsWith("Deslocamento não calculado"));
   calc.editadoManualmente = true;
   recalcularTotais(calc);
   limparAprovacao(orc);
