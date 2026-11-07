@@ -6,7 +6,7 @@ Hub de captação de clientes. A IA do WhatsApp coleta os dados da cliente e env
 WhatsApp (IA) ──lead──▶ Hub ──▶ cálculo (IA/regras) ──▶ aprovações (Comercial, Financeiro)
       ▲                                                          │
       └────────── PDF + mensagem sugerida ◀──────────────────────┘
-cliente responde (link do PDF ou no chat) ──▶ Hub notifica a equipe
+cliente aprova (botão do PDF ou no chat) ou pede ajustes (só no chat) ──▶ Hub notifica
 ```
 
 ## Rodando
@@ -24,7 +24,7 @@ Sem configurar nada, o hub funciona em modo local: cálculo por regras, retorno 
 - **Fila** — orçamentos que precisam de ação, **mais antigos primeiro**. Passou de `atrasoHoras` (config) aparece marcado como atrasado. Abas: Pendentes / Concluídos / Todos.
 - **Orçamento** — dados da cliente, cálculo (editável), briefing, imagens do chat, conversa, aprovações, pedido de mudança, PDF e histórico.
 - **Notificações** — novo lead, novas informações no chat, resposta da cliente, falha de envio. O hub atualiza a cada 6 s.
-- **Página da cliente** (`/p/:token`) — aberta pelos botões do PDF: *Aprovar orçamento* ou *Solicitar mudanças*.
+- **Página da cliente** (`/p/:token`) — aberta pelo botão *Aprovar orçamento* do PDF. Não há link para pedir alterações: ajustes são combinados na conversa do WhatsApp.
 
 ## Status do orçamento
 
@@ -34,7 +34,7 @@ Sem configurar nada, o hub funciona em modo local: cálculo por regras, retorno 
 | `aguardando_aprovacao` | Esperando as etapas de `etapasAprovacao` |
 | `enviado` | Todas aprovaram; PDF devolvido à IA do WhatsApp |
 | `falha_envio` | O endpoint do WhatsApp falhou (botão de reenvio) |
-| `mudanca_cliente` | A cliente pediu mudanças → equipe recalcula/edita e aprova de novo |
+| `mudanca_cliente` | A cliente pediu ajustes na conversa (a IA do WhatsApp repassa) → recalcular/editar e aprovar de novo |
 | `aceito_cliente` | A cliente aprovou |
 
 Pedir mudança ou editar itens **zera as aprovações**.
@@ -45,7 +45,7 @@ Todas as chamadas levam o header `x-hub-token: $HUB_WEBHOOK_TOKEN`.
 
 ### 1. Enviar lead — `POST /api/webhooks/whatsapp/lead`
 
-Veja `exemplos/lead.json`. Imagens podem vir como `url` (o hub baixa e guarda, já que links de mídia do WhatsApp expiram) ou `base64` + `mimeType`. Chamar de novo com o mesmo `conversationId` enquanto o orçamento estiver aberto **acrescenta** mensagens e imagens e recalcula.
+Veja `exemplos/lead.json`. Imagens podem vir como `url` (o hub baixa e guarda, já que links de mídia do WhatsApp expiram) ou `base64` + `mimeType` (sem legenda: as fotos ficam todas juntas no orçamento). Chamar de novo com o mesmo `conversationId` enquanto o orçamento estiver aberto **acrescenta** mensagens e imagens e recalcula.
 
 Resposta: `{ "orcamentoId", "codigo", "status", "novo", "falhasImagens" }`
 
@@ -61,14 +61,16 @@ O hub faz `POST` (header `x-hub-token: $WHATSAPP_CALLBACK_TOKEN`) com:
   "total": 1890, "validadeDias": 7,
   "evento": { "tipo": "Casamento", "data": "12/12/2026", "horario": "06:00", "local": "Campinas/SP" },
   "pdfUrl": "https://hub/p/<token>/orcamento.pdf",
-  "linkResposta": "https://hub/p/<token>",
+  "linkAprovacao": "https://hub/p/<token>",
   "mensagemSugerida": "Oi Mariana! Seu orçamento ORC-0001 está pronto…"
 }
 ```
 
-Quando a cliente responde pelo link do PDF, o hub envia `{"evento": "resposta_cliente", "decisao": "aprovado" | "mudanca", "comentario", …}` para a mesma URL.
+O retorno **não** traz link para a cliente pedir alterações — só `linkAprovacao`. Quando ela aprova pelo botão do PDF, o hub envia `{"evento": "resposta_cliente", "decisao": "aprovado", …}` para a mesma URL.
 
 ### 3. Repassar a resposta dada no chat — `POST /api/webhooks/whatsapp/resposta`
+
+É o único caminho para pedidos de ajuste.
 
 ```json
 { "orcamentoId": "…", "decisao": "mudanca", "comentario": "Queria material padrão" }
@@ -90,5 +92,5 @@ Mobile-first, tema claro, elementos arredondados e sem animações. Paleta nude/
 ## Limitações do MVP
 
 - Armazenamento em `data/db.json` (um processo só). Para produção, trocar por Postgres/SQLite.
-- Login do hub é só uma senha opcional (`HUB_PASSWORD`, HTTP Basic). Sem usuários/perfis — o nome de quem aprova é digitado na tela.
+- Login do hub é só uma senha opcional (`HUB_PASSWORD`, HTTP Basic). Feito para uma usuária só: não há perfis nem registro de quem aprovou.
 - Notificações por polling (6 s), sem push/e-mail.
