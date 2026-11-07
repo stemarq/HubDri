@@ -185,6 +185,26 @@ Ao subir, o hub mostra `dados: Supabase`. Sem essas variáveis, ele continua gra
 - Cada mudança é gravada no banco em segundo plano. Se o Supabase falhar, o hub tenta de novo em 30 s.
 - As imagens do chat vão para o bucket `imagens-orcamento`. A pasta `data/uploads` passa a ser só um cache local, que pode ser apagado.
 
+## Deploy na Vercel (hub)
+
+O hub roda na Vercel como uma função (`api/index.js` → `src/server.js`). O agente ADRI **não** roda na Vercel: ele mantém conexão aberta com o Telegram e grava em SQLite. Ele vai para um servidor que fique ligado, como Railway, Render ou uma VPS.
+
+Na Vercel cada requisição pode cair numa instância diferente. Por isso, lá o hub:
+- exige o Supabase (sem ele não sobe);
+- relê os dados do Supabase a cada requisição e só responde depois de gravar;
+- termina o cálculo da IA depois da resposta, com `waitUntil` (limite de 120 s em `vercel.json`);
+- pega o código `ORC-0001` da sequence do banco (migration `20261108120000_codigo_pelo_banco.sql`);
+- usa `/tmp` como cache das imagens.
+
+As fotos de atendimento do PDF (`data/marca/`) não sobem, porque têm fotos de clientes. Na Vercel o PDF sai sem elas.
+
+Passos:
+1. Aplique as migrations no Supabase (`npx supabase db push`), incluindo a de código pelo banco e a da tabela de preços.
+2. Importe o repositório na Vercel (framework: **Other**, sem build).
+3. Em **Settings → Environment Variables**, cadastre as mesmas variáveis do `.env`, com `PUBLIC_URL` = endereço da Vercel e `NODE_ENV=production`. `PORT` não é usada.
+4. No Supabase, em **Authentication → URL Configuration**, troque o Site URL e o Redirect URL (`<PUBLIC_URL>/definir-senha`) pelo endereço da Vercel.
+5. Quando o agente estiver no ar: `AGENTE_URL` e `WHATSAPP_CALLBACK_URL` no hub apontam para ele, e `HUB_URL` no agente aponta para a Vercel.
+
 ## Limitações do MVP
 
 - Um processo só: mesmo com o Supabase, os dados ficam em memória. Rodar duas instâncias do hub ao mesmo tempo causaria conflito.
