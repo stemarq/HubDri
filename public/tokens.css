@@ -1,0 +1,82 @@
+/* Tokens compartilhados entre o hub e a página da cliente.
+   Tema claro apenas, paleta nude/rosé. Tipografia inspirada em patternbreak.ing: grotesca (Neue Montreal) + IBM Plex Mono.
+   Neue Montreal é comercial: com a licença, coloque os .woff2 em /public/fonts e ela passa a ser usada;
+   senão cai em Inter Tight (Google Fonts). */
+@font-face { font-family: "Neue Montreal"; src: url("/fonts/NeueMontreal-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Neue Montreal"; src: url("/fonts/NeueMontreal-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Neue Montreal"; src: url("/fonts/NeueMontreal-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+  color-scheme: light;
+  /* Paleta: ead7c6 · ddbba8 · f7f3ef · a98c7a · c87d76 · b66a5c · 7b4b4f · 3a2a23 */
+  --areia: #ead7c6;
+  --nude: #ddbba8;
+  --creme: #f7f3ef;
+  --taupe: #a98c7a;
+  --rose: #c87d76;
+  --terracota: #b66a5c;
+  --ameixa: #7b4b4f;
+  --cacau: #3a2a23;
+
+  --bg: var(--creme);
+  --surface: #ffffff;
+  --fg: var(--cacau);
+  --muted: var(--ameixa);
+  --border: var(--areia);
+  --border-strong: var(--nude);
+  --primary: var(--terracota); /* cor principal (burnt rose): botões, total, marca */
+  --primary-hover: var(--ameixa);
+  --primary-fg: #ffffff;
+  --accent: var(--nude);       /* destaques suaves: pendências */
+  --accent-fg: var(--cacau);
+  --brand: var(--primary);     /* pontos de cor: contador, notificações */
+  --danger: var(--terracota);
+  --r-sm: 10px;
+  --r: 16px;
+  --r-lg: 22px;
+  --pill: 999px;
+  --shadow: 0 1px 2px rgba(58, 42, 35, 0.05), 0 2px 10px rgba(58, 42, 35, 0.05);
+  --sans: "Neue Montreal", "Inter Tight", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+button, input, textarea, select { font: inherit; color: inherit; }
+img { max-width: 100%; }
+
+.label {
+  font: 500 11px/1.35 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--border-strong); border-radius: var(--pill); background: var(--surface);
+  font: 500 14px/1 var(--sans);
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+}
+.btn:hover { border-color: var(--fg); }
+.btn.cheio { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); font-weight: 600; }
+.btn.cheio:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.btn.destaque { background: var(--rose); border-color: var(--rose); color: var(--cacau); }
+.btn.pequeno { min-height: 36px; padding: 0 14px; font-size: 13px; }
+.btn.bloco { width: 100%; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--primary); outline-offset: 2px;
+}
+
+input, textarea, select {
+  width: 100%; padding: 11px 14px; font-size: 16px; /* 16px evita zoom no iOS */
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: var(--surface);
+}
+input:focus, textarea:focus, select:focus { border-color: var(--primary); outline: none; }
+textarea { resize: vertical; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow); }

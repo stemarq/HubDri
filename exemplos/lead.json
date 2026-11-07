@@ -1,0 +1,31 @@
+{
+  "conversationId": "wa-5511987654321-20261107",
+  "cliente": {
+    "nome": "Mariana Lopes",
+    "telefone": "+55 11 98765-4321",
+    "email": "mariana@example.com",
+    "cidade": "São Paulo/SP"
+  },
+  "evento": {
+    "tipo": "Casamento",
+    "data": "12/12/2026",
+    "horario": "06:00",
+    "local": "Espaço Villa Lobos, São Paulo/SP"
+  },
+  "briefing": {
+    "resumo": "Noiva quer maquiagem e penteado para ela e 3 madrinhas, com início às 6h.",
+    "respostas": [
+      { "pergunta": "Quem será maquiada", "resposta": "Noiva + 3 madrinhas" },
+      { "pergunta": "Serviços", "resposta": "Maquiagem e penteado" },
+      { "pergunta": "Estilo", "resposta": "Make leve, pele iluminada" }
+    ]
+  },
+  "conversa": [
+    { "de": "ia", "texto": "Oi! Me conta sobre o seu evento?", "em": "2026-11-07T10:00:00-03:00" },
+    { "de": "cliente", "texto": "Vou casar em dezembro! Make e penteado pra mim e 3 madrinhas.", "em": "2026-11-07T10:01:12-03:00" }
+  ],
+  "imagens": [
+    { "url": "https://exemplo.com/midia/referencia1.jpg" },
+    { "base64": "<conteúdo base64>", "mimeType": "image/jpeg" }
+  ]
+}

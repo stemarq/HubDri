@@ -1,0 +1,22 @@
+{
+  "empresa": {
+    "nome": "HubDri",
+    "contato": "contato@hubdri.com.br",
+    "telefone": "(11) 90000-0000",
+    "rodapePdf": "Orçamento válido pelo prazo indicado. A data só fica reservada após a confirmação do sinal."
+  },
+  "validadeDias": 7,
+  "descontoMaximoPercentual": 10,
+  "atrasoHoras": 24,
+  "instrucoesCalculo": "Monte o orçamento usando apenas itens do catálogo. Conte quantas pessoas serão maquiadas (noiva, madrinhas, mães, convidadas) e quais serviços cada uma quer. Inclua deslocamento (ida e volta) se o local for fora da região, taxa de horário especial se o atendimento começar antes das 7h e horas de permanência se a cliente pedir acompanhamento no evento. Se faltar informação, faça uma estimativa conservadora e registre em pontosDeAtencao.",
+  "catalogo": [
+    { "codigo": "MAKE-NOIVA", "descricao": "Maquiagem de noiva", "unidade": "un", "valor": 900 },
+    { "codigo": "TESTE-NOIVA", "descricao": "Teste de maquiagem (noiva)", "unidade": "un", "valor": 350 },
+    { "codigo": "MAKE-SOCIAL", "descricao": "Maquiagem social", "unidade": "pessoa", "valor": 250 },
+    { "codigo": "PENTEADO", "descricao": "Penteado", "unidade": "pessoa", "valor": 200 },
+    { "codigo": "CILIOS", "descricao": "Cílios postiços", "unidade": "pessoa", "valor": 40 },
+    { "codigo": "MADRUGADA", "descricao": "Horário especial (antes das 7h)", "unidade": "un", "valor": 150 },
+    { "codigo": "PERMANENCIA", "descricao": "Permanência no evento (retoques)", "unidade": "hora", "valor": 180 },
+    { "codigo": "DESL", "descricao": "Deslocamento (ida e volta)", "unidade": "km", "valor": 2.5 }
+  ]
+}
