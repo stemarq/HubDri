@@ -3,9 +3,15 @@ import path from "node:path";
 
 const arquivo = path.resolve("config", "hub.config.json");
 
-// Relido a cada uso: editar o catálogo não exige reiniciar o servidor.
+// Com Supabase, a tabela de preços e as configurações vêm do banco (carregadas ao iniciar e a cada
+// gravação, ver config-banco.js). Sem banco: arquivo base + data/config-editada.json, relidos a cada uso.
+let doBanco = null;
+export const definirConfigDoBanco = (c) => { doBanco = c; };
+export const configDoArquivo = () => JSON.parse(fs.readFileSync(arquivo, "utf8"));
+
 export function config() {
-  const base = JSON.parse(fs.readFileSync(arquivo, "utf8"));
+  const base = configDoArquivo();
+  if (doBanco) return { ...base, ...doBanco, empresa: { ...base.empresa, ...(doBanco.empresa || {}) }, apresentacao: { ...base.apresentacao, ...(doBanco.apresentacao || {}) } };
   // Edições feitas no app (aba Configurações) ficam em data/config-editada.json, fora do Git, e valem sobre o arquivo base.
   try {
     const editada = JSON.parse(fs.readFileSync(arquivoEditado, "utf8"));

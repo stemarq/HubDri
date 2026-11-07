@@ -24,6 +24,7 @@ const supa = env.supabaseUrl && env.supabaseKey
   ? createClient(env.supabaseUrl, env.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
 export const modo = supa ? "supabase" : "arquivo";
+export const supabase = supa;
 
 export const agora = () => new Date().toISOString();
 export const novoId = () => crypto.randomUUID();

@@ -12,6 +12,9 @@ import { paginaCliente } from "./pagina-cliente.js";
 import { loginAtivo, exigirLogin, rotasDeAcesso } from "./auth.js";
 import { rotasConversas } from "./conversas.js";
 import { rotasConfiguracoes } from "./configuracoes.js";
+import { carregarConfigDoBanco } from "./config-banco.js";
+
+await carregarConfigDoBanco();
 
 const app = express();
 app.use(express.json({ limit: "40mb" }));
@@ -189,6 +192,9 @@ app.post("/api/orcamentos/:id/recalcular", rota((req, res) => {
 }));
 app.put("/api/orcamentos/:id/calculo", rota((req, res) => {
   res.json(fluxo.editarCalculo(req.params.id, req.body, req.usuario));
+}));
+app.post("/api/orcamentos/:id/local", rota(async (req, res) => {
+  res.json(fluxo.trocarLocal(req.params.id, req.body.local, req.usuario));
 }));
 app.post("/api/orcamentos/:id/reenviar", rota(async (req, res) => {
   res.json(await fluxo.enviar(req.params.id));

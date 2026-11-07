@@ -5,6 +5,7 @@ import { config, arquivoEditado, env } from "./config.js";
 import { iaNome } from "./ia.js";
 import * as store from "./store.js";
 import { loginAtivo } from "./auth.js";
+import { configNoBanco, salvarConfigNoBanco } from "./config-banco.js";
 
 const url = () => (process.env.AGENTE_URL || "http://localhost:3001").replace(/\/$/, "");
 const token = () => process.env.AGENTE_TOKEN || "";
@@ -46,8 +47,8 @@ const numero = (v, nome, { min = 0, max = 1e9 } = {}) => {
   return n;
 };
 
-/** Valida e grava as edições do hub. O arquivo base (config/hub.config.json) não é alterado. */
-function salvarHub(b) {
+/** Valida e grava as edições do hub: no Supabase quando há banco; senão em data/config-editada.json. O arquivo base não é alterado. */
+async function salvarHub(b, autor) {
   // "Detalhe" e "o que está incluso" (usados no PDF) não aparecem na tela: seguem o item de mesmo código.
   const atuais = new Map(config().catalogo.map((c) => [c.codigo, c]));
   const catalogo = (b.catalogo || []).map((c, i) => {
@@ -57,7 +58,9 @@ function salvarHub(b) {
       codigo,
       descricao: texto(c.descricao, `Descrição do item ${i + 1}`, { max: 120, obrigatorio: true }),
       unidade: texto(c.unidade, `Unidade do item ${i + 1}`, { max: 20, obrigatorio: true }),
-      valor: numero(c.valor, `Valor do item ${i + 1}`, { max: 1e6 }),
+      valor: numero(c.valor, `Valor no studio do item ${i + 1}`, { max: 1e6 }),
+      // Vazio = sem preço a domicílio cadastrado (o hub usa o do studio e avisa).
+      ...(c.valorDomicilio !== "" && c.valorDomicilio != null && { valorDomicilio: numero(c.valorDomicilio, `Valor a domicílio do item ${i + 1}`, { max: 1e6 }) }),
       ...(detalhe && { detalhe }),
       ...(inclui && { inclui }),
     };
@@ -77,6 +80,10 @@ function salvarHub(b) {
     instrucoesCalculo: texto(b.instrucoesCalculo, "Instruções de cálculo", { max: 4000 }),
     catalogo,
   };
+  if (configNoBanco()) {
+    await salvarConfigNoBanco(novo, autor?.id);
+    return novo;
+  }
   fs.mkdirSync(path.dirname(arquivoEditado), { recursive: true });
   const tmp = arquivoEditado + ".tmp";
   fs.writeFileSync(tmp, JSON.stringify(novo, null, 2));
@@ -138,6 +145,6 @@ export function rotasConfiguracoes(app, rota) {
       agente: await lerAgente(),
     });
   }));
-  app.put("/api/configuracoes/hub", rota(async (req, res) => res.json(salvarHub(req.body))));
+  app.put("/api/configuracoes/hub", rota(async (req, res) => res.json(await salvarHub(req.body, req.usuario))));
   app.put("/api/configuracoes/agente", rota(async (req, res) => res.json(await salvarAgente(req.body))));
 }
