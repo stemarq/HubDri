@@ -58,34 +58,42 @@ export function propostaPorRegras(orc) {
     return m ? Number(m[1].replace(",", ".")) : null;
   };
   const noiva = /noiva|casamento|casar|casando/.test(texto);
-  const extras = num(/(\d+)\s*(?:pessoas|madrinhas|convidadas|maquiagens|amigas|mulheres)/);
-  const km = num(/(\d+(?:[.,]\d+)?)\s*km/);
-  // Início do atendimento: "às 6h", "às 5:30", "começando 6h" — ignora durações como "3 horas".
-  const mHora = texto.match(/(?:às|as|a partir das|come[cç]ando)\s+([0-6])(?:h|:\d\d)?(?![\d:])|(?<![\d:])([0-6])h(?![a-z])/);
-  const hora = mHora ? Number(mHora[1] ?? mHora[2]) : null;
-  const permanencia = num(/(\d+)\s*h(?:oras?)?\s*de perman/) ?? num(/perman[eê]ncia:?\s*(\d+)/);
+  const debutante = !noiva && /debutante|15 anos|quinze anos/.test(texto);
+  const principal = noiva ? "NOIVA" : debutante ? "DEB" : null; // a protagonista tem itens próprios
+  // "3 madrinhas" = além da protagonista; "3 pessoas"/"3 maquiagens" = total, contando ela.
+  const acompanhantes = num(/(\d+)\s*(?:madrinhas|convidadas|amigas|mulheres|damas)/);
+  const total = num(/(\d+)\s*(?:pessoas|maquiagens)/);
+  const extras = acompanhantes != null ? acompanhantes + (principal ? 1 : 0) : total;
+  const teste = /\bteste\b|\bprova\b/.test(texto);
   const penteado = /penteado|cabelo/.test(texto);
+  const russo = /russo/.test(texto);
+  const cacheado = /cachead|cachos/.test(texto);
   const cilios = /c[ií]lios/.test(texto);
 
-  // "pra mim e mais 2" = a própria cliente + 2 (se ela for a noiva, já entra como noiva)
+  // "pra mim e mais 2" = a própria cliente + 2 (se ela for a noiva/debutante, já entra como tal)
   const maisN = num(/(?:mim|eu)\s+e\s+(?:mais\s+)?(?:pra\s+|para\s+)?(\d+)/);
-  const pessoasSociais = maisN != null ? maisN + (noiva ? 0 : 1) : extras ?? (noiva ? 0 : 1);
-  const totalPessoas = pessoasSociais + (noiva ? 1 : 0);
-  const itens = [];
-  if (noiva) {
-    itens.push({ codigo: "MAKE-NOIVA", quantidade: 1 });
-    itens.push({ codigo: "TESTE-NOIVA", quantidade: 1 });
-  }
-  if (pessoasSociais > 0) itens.push({ codigo: "MAKE-SOCIAL", quantidade: pessoasSociais });
-  if (penteado) itens.push({ codigo: "PENTEADO", quantidade: totalPessoas });
-  if (cilios) itens.push({ codigo: "CILIOS", quantidade: totalPessoas });
-  if (hora != null && hora < 7) itens.push({ codigo: "MADRUGADA", quantidade: 1, observacao: `início às ${hora}h` });
-  if (permanencia) itens.push({ codigo: "PERMANENCIA", quantidade: permanencia });
-  if (km && km > 15) itens.push({ codigo: "DESL", quantidade: km * 2, observacao: `${km} km, ida e volta` });
+  const outras = maisN != null ? maisN + (principal ? 0 : 1) : extras != null ? Math.max(extras - (principal ? 1 : 0), 0) : principal ? 0 : 1;
 
+  const itens = [];
   const pontos = ["Calculado por regras automáticas (IA indisponível). Revise antes de aprovar."];
-  if (extras == null && !noiva) pontos.push("Número de pessoas não informado: considerada 1 pessoa.");
-  if (penteado || cilios) pontos.push("Penteado/cílios aplicados a todas as pessoas — confirme quem quer.");
+  if (principal) {
+    itens.push({ codigo: `${principal}-MAKE${teste ? "-TESTE" : ""}`, quantidade: 1 });
+    if (penteado) {
+      // Só usa combinações que existem na tabela.
+      const opcoes = noiva
+        ? [russo && teste && "NOIVA-PENT-RUSSO-TESTE", teste && "NOIVA-PENT-TESTE", "NOIVA-PENT"]
+        : [russo && teste && "DEB-PENT-RUSSO-TESTE", russo && "DEB-PENT-RUSSO", teste && "DEB-PENT-TESTE", cacheado && "DEB-PENT-CACHEADO", "DEB-PENT"];
+      itens.push({ codigo: opcoes.find(Boolean), quantidade: 1 });
+      if (noiva && russo && !teste) pontos.push("Penteado russo para noiva só existe com teste na tabela: foi considerado o penteado de noiva simples.");
+    }
+  }
+  if (outras > 0) itens.push({ codigo: "MAKE-VISAGISTA", quantidade: outras });
+  if (cilios) itens.push({ codigo: "CILIOS", quantidade: 1 });
+
+  if (extras == null && maisN == null && !principal) pontos.push("Número de pessoas não informado: considerada 1 pessoa.");
+  if (penteado && outras > 0) pontos.push("Penteado incluído só para a protagonista: confirme se as outras pessoas também querem.");
+  if (cilios) pontos.push("Cílios considerados para 1 pessoa: confirme quantas querem.");
+  if (/\bkm\b|desloc|perman[eê]ncia|retoque/.test(texto)) pontos.push("Deslocamento e permanência não estão na tabela de preços: combine à parte, se for o caso.");
 
   return {
     itens,
@@ -93,7 +101,7 @@ export function propostaPorRegras(orc) {
     resumo:
       orc.briefing?.resumo ||
       (orc.briefing?.respostas || []).map((r) => `${r.pergunta}: ${r.resposta}`).join(" · "),
-    justificativa: `${noiva ? "Noiva + " : ""}${pessoasSociais} maquiagem(ns) social(is)${penteado ? ", com penteado" : ""}${cilios ? ", com cílios" : ""}.`,
+    justificativa: `${noiva ? "Noiva + " : debutante ? "Debutante + " : ""}${outras} maquiagem(ns) visagista(s)${penteado ? ", com penteado" : ""}${cilios ? ", com cílios" : ""}.`,
     pontosDeAtencao: pontos,
   };
 }
